@@ -1,25 +1,48 @@
 # Ember Application Structure
 
-On a high-level, an Ember application is created by defining a series of
-`Ember.route`s that correspond to application states.  These Routes can
-be created such that they contain *other* `Route`s, a pattern that is called
-"_nesting_."  When these states are entered, view templates and their
-associated controllers are instantiated and bound by a recursive
-inter-linking of views whose selection and content is determined by the
-`Route`'s state.
+## Introduction
 
-This guide explains how routing works in Ember and also offers
-demonstration code.  It proceeds from a definitions-oriented, bottom-up
-approach.
+<!--- {{{1 -->
 
-## Navigation, Routing, and State Machines
+Using the [Ember.Router][EmberRouter] is the preferred pattern for building large
+applications in [Ember.JS][EmberSite].  Ember's approach is to conceive
+of your application as a collection of states which can be accessed via
+both unique internal specifiers _as well as_ by URL paths that "route"
+to those states.
 
-In order to explain the Router, I wish to present a series of definitions.
+This approach has many advantages:
+
+  * Employment of the [State Machine][StateMachine] pattern
+  * Functional states of the application define the URL, not vice-versa
+  * Based on entry of these states, recursive chains of views can be
+    automatically instantiated and inserted _without your having to manage them!_
+  * Built-in support for the nesting of routes
+
+This guide is designed to help the reader accomplish the following:
+
+  * Understand key terminology
+  * Set up an [Ember.Router][EmberRouter]
+  * Have the Router create and display views whose content is informed by the active
+[Ember.Route][EmberRoute]
+
+As a first step, we establish a common vocabulary of activities and
+nouns.
+
+<!--- }}}1 -->
+
+## Definitions
+
+<!--- {{{1 --> 
+
+In common parlance, several of the activities that are essential to the
+router's function are conflated.  To ensure clarity this guide defines
+*navigation*, *routing*, *state* / *route*, and *nesting* as specific
+terms of art.
 
 ### Navigation
 
 Let us first consider the most visible activty associated with any web
-application:  *navigation*.  Navigation is the act of following a link
+application:  *Navigation*.  Navigation is the act of following a link
 whose `href` attribute corresponds to a URL or entering a URL into some
 sort of HTTP processing application.  Navigation occurs when:
 
@@ -27,41 +50,48 @@ sort of HTTP processing application.  Navigation occurs when:
 * Erik writes a Ruby script that accesses an application's RESTful
   API at `http://example.com/api/widgets/list`
 
-### Routing
+In Ember this looks like `http://example.com/#/posts` or `http://localhost:4567/#/cars`.
 
-*Navigation* is a different activity than *routing*.  *Routing* is the
-act of mapping a URL onto a *route*.  A *route* represents a
-configuration state of the application that _need not_ have any visual
-similarity to the URL which was the result of navigation  Thus for the
-url `http://example.com/post/1`, a *route* might be
-"`root.posts.singlepost`."
+### Routing, State, and Route
 
-### States
+A *State* is a deterministic configuration of the application.  It can
+be imagined as a set of variables, a set of visible views, a set of
+instantiated objects, etc.  A state can be transitioned into by means of
+a unique trigger that activates this configuration.  In Ember this looks
+like `root.index` or `posts.post.comment`.
 
-The aforementioned "configuration states" are representations of
-"`Ember.State`s."  They represent a point in time where certain
-variables are defined, objects instantiated, configuration made,
-processing done, etc.
+When a *State* can be invoked by means of a navigable URL, it is said to
+be a *Route*.  *Routing* is the act of mapping a URL onto a *route*.
+Thus a correspondence between URL and State emerges:
+`http://example.com/#/posts` would sensibly map to
+`posts.index`.<sup>1</sup>
+
+### Nesting
+
+
+As mentioned previously, Routes can be nested.  When a route has
+sub-routes it is called the *parent* route and its sub-routes are called
+*child* routes and / or *leaf* routes.  
+
+**Parent routes are not-routable**.  They transfer the responsibility of
+instantiating the state to a series of child states.
+
+<!--- }}}1 --> 
 
 ## Intersection of Navigation URLs, Routes, and States
 
 Given that there is a correspondence between navigational endpoints
 (URLs), their routes, and those routes' "states," it is obvious that an
-Ember application that uses the Router is a "[state
-machine](http://en.wikipedia.org/wiki/Finite-state_machine)." 
+Ember application that uses the Router is a [State Machine][StateMachine].
 
-Reconsider the introduction to this document in light of these
-discussions:
+## Summation of Definitions' Interplay and Roles
 
-    On a high-level, an Ember application is created by defining a series of
-    `Ember.route`s that correspond to application states.  These Routes can
-    be created such that they contain other Routes, a pattern that is called
-    "_nesting_."
+<!--- {{{1 --> 
 
 Ergo Ember will support navigable URLs:
-  * /cars
-  * /shoes
-  * /users
+  * http://example.com/app/#/posts
+  * http://example.com/app/#/about
+  * http://example.com/app/#/users
 
 that, when parsed will correspond to some sort of "route" structure
 whose names are arbitrarily linked to the endpoints' names:
@@ -70,20 +100,20 @@ whose names are arbitrarily linked to the endpoints' names:
      route: '/cars' 
     }
 
-which, in turn, will hand to a state the responsibility of creating the
-necessary Model, Controller, View and instances required to support a
-given set of functionality.
+which, in turn, will bear the responsibility of creating the necessary
+Model, Controller, View and instances required to support a given set of
+functionality.
 
-Also mentioned in the introduction was a concept called _nesting_.
-Just as certain navigable URLs like `/cars` make sense, in keeping with
-the [REST](http://en.wikipedia.org/wiki/Representational_state_transfer)
-paradigm, it makes sense to have nested navigable URLs that correspond
-to nested states e.g. `/cars/create` or `/cars/show/bmw-m5`.
+With this general groundwork in place, we shall now consider the
+behavior of a user on a site given this common vocabulary.  Thence we
+shall undertake a series of exercises that will create a basic routable
+application.
 
-With this common set of terms and understanding, let's build up a simple
-example.
+<!--- }}}1 --> 
 
 ## Routing
+
+<!--- {{{1 --> 
 
 A user navigates through your application by making choices about what
 to view. For example, in a blog application, a user might choose between
@@ -92,22 +122,29 @@ for preferred choice (in this case, probably Posts).
 
 Once the user has made their first choice, they're usually not done. In
 the context of Posts, the user might eventually view an individual post
-and its comments. Inside of an individual post, they can choose between
+and its comments. Inside of an individual post, they could choose between
 viewing a list of comments and a list of trackbacks.
 
 Importantly, in all of these cases, the user's navigational choice is
-informing what to display on the page. As you descend deeper into your
-application state, those choices affect smaller areas of the page.
+informing what to display on the page. As they descend deeper into your
+application's state, those choices affect smaller areas of the page.
 
-Let's translate this theoretical description of "browsing a web site"
-into a practical demonstration.  Let's build something that translates
-URLs to routes and routes to states.  That device, in Ember, is called
-an `Ember.Router`.
+Let's undertake an exercise to see how we might implement such an
+application.
 
-The most basic Ember.Application that makes use of a Router looks like
-this:
+<!--- }}}1 --> 
+
+## Practical Application
+
+### Step One: Minimum Non-Viable Router
 
 <!--- {{{1 -->
+This step:
+
+1.  Creates an Ember.Application
+1.  Gives preliminary debugging output 
+1.  Produces one critical error
+
     window.App = Ember.Application.create({
       ready: function(){
         console.log("Created App namespace");
@@ -118,25 +155,20 @@ this:
     });
 
     App.initialize();
-<!--- }}}1 -->
 
-Let's try running it and see what happens.  *It didn't work.*  This is OK.
+When we run this application with our console open, we see the onReady
+event fire.  In the console `Created App namespace` appears.  But an
+error appears as well:   `Uncaught Error: assertion failed: Failed to
+transition to initial state "root" `.  
 
-First we see the successful `console.log` message as the onReady event
-fires.  We are then given a helpful error message `Uncaught Error:
-assertion failed: Failed to transition to initial state "root" `.  OK,
-so we need to create something called `root`.  According to the error,
-this `root` thing should be a *state*.  
+The Router class of of an Ember application **must** contain an
+Ember.State called `root`.  As a legacy of Ember's history and
+inheritance chain, `State` is a synonym for `Route` (see discussion
+above).  As such, an `Ember.Route` called `root` must be
+added.<sup>2</sup>  
 
-*But we will not create a State, we will create a Route* As a legacy of
-Ember's history, `state` is a synonym for `route`.  Therefore, Ember is
-telling us to build an `Ember.Route` called `root.`<sup>1</sup>  Also at
-this point I'll remove the preliminary ready event console logging, feel
-free to keep it in.
+The amended code will look like the following:
 
-Let's do just that:
-
-<!--- {{{1 -->
     window.App = Ember.Application.create({
         Router: Ember.Router.extend({
           root:  Ember.Route.extend({
@@ -147,94 +179,133 @@ Let's do just that:
 
 <!--- }}}1 -->
 
-Let's try running it and see what happens.  *It didn't work.*  This is
-OK.  This time we get a new, helpful error:  `Uncaught Error: assertion
+### Step Two: Minimum Non-Viable Router Part II
+
+<!--- {{{1 -->
+
+Running the previous code *again* produces an error:  `Uncaught Error: assertion
 failed: ApplicationView and ApplicationController must be defined on
-your application`.  Apparently these two names are somehow special.
-Let's create them:
+your application`.  
 
-<!--- {{{1 -->
+An Ember application using the router must define both
+ApplicationController and ApplicationView.  In conjunction with a `root`
+route that has a routable child, these are the only requirements for an
+Ember application that makes use of the Router.
 
+The following snippet should be considered the standard, minimal, Ember
+application:
+
+
+<!--- {{{2 -->
     window.App = Ember.Application.create({
         ApplicationView: Ember.View.extend(),
         ApplicationController: Ember.Controller.extend(),
         Router: Ember.Router.extend({
           root:  Ember.Route.extend({
-          })
-        })
-    });
-    App.initialize();
-
-<!--- }}}1 -->
-
-And violà, we now have an Ember application that has a single route.  To
-make things more interesting, we can add an `enter` callback and print
-something to the console.
-
-<!--- {{{1 -->
-    window.App = Ember.Application.create({
-        ApplicationView: Ember.View.extend(),
-        ApplicationController: Ember.Controller.extend(),
-        Router: Ember.Router.extend({
-          root:  Ember.Route.extend({
-            enter: function(router) {
-                console.log("The root state was entered.");
-            }
-          })
-        })
-    });
-    App.initialize();
-<!--- }}}1 -->
-
-
-## The `root` route is special
-
-By default, when the Router is instantiated it automatically moves to
-the state `root`.  You can think of this as the "default landing place."  
-for the Router.
-
-It is important that you make several cognitive leaps here and accept
-that `root` is special.  `root` **is not a route** itself.  It is the
-box which contains the routes, but it is not a route.  It bears
-repeating:  **You cannot make this default landing place routable.**
-This is a source of nearly *endless* frustration for those new to the
-Router.
-
-For the purposes of this guide and the budding Emberist's sanity, it's
-important to make, on the `root` at least one sub-state.  By convention,
-this is called `index.`  There are several good reasons for this, but
-they are outside the scope of an introductory guide.  Let's just accept
-this bit of Ember magic and be thankful.
-
-
-<!--- {{{1 -->
-    window.App = Ember.Application.create({
-        ApplicationView: Ember.View.extend(),
-        ApplicationController: Ember.Controller.extend(),
-
-        Router: Ember.Router.extend({
-          root:  Ember.Route.extend({
-            enter: function ( router ){
-              console.log("The root state was entered.");
-            },
             index:  Ember.Route.extend({
-              enter: function ( router ){
-                console.log("The index sub-state was entered.");
-              },
-              route: '/'
+              route:  '/'
             })
           })
         })
     });
     App.initialize();
 
+<!--- }}}2 -->
+
+Since this application has no views associated with it, it is hard to
+see that it is working.  We can add `console.log` actions to the `enter`
+property of the Ember.Routes (as specified in their superclass
+Ember.State's API documentation).
+
+<!--- {{{2 -->
+    window.App = Ember.Application.create({
+        ApplicationView: Ember.View.extend(),
+        ApplicationController: Ember.Controller.extend(),
+        Router: Ember.Router.extend({
+          root:  Ember.Route.extend({
+            enter:  function(){
+              console.log("entered root");
+            },
+            index:  Ember.Route.extend({
+              enter:  function(){
+                console.log("entered index");
+              },
+              route:  '/'
+            })
+          })
+        })
+    });
+    App.initialize();
+<!--- }}}2 -->
+
 <!--- }}}1 -->
 
-Adding sub-routes is a perfectly normal thing to do.  Those becoming
-familiar with the router should not be afraid of doing so.  To prove the
-point, we will add a few additional sub-routes.
+### Aside:  Required Components
 
-<!--- {{{1 --> 
+<!--- {{{1 -->
+
+#### Root "Route"
+
+<!--- {{{2 -->
+While the guidelines given in Step Two are sufficient to create a
+baseline routing application, this section provides the "why" an
+application must meet the requirements.  
+
+By default, when the Router is instantiated it automatically moves to
+the state `root`.  This is the "default landing place" for the Router.
+`root` **is not a route** itself.  It is the box which contains the
+routes, but it is not a route.  It bears repeating:  **You cannot make
+this default landing place routable.**  As such if `root` is not present
+the Router should, and does, report an error.
+
+If an application has only one route, as does our example thus far, it
+should have a sub-Route, by convention, called `index` that answers to
+the navigable hash-bang url `/`; that is, the default URL to navigate to
+the application.
+
+<!--- }}}2 -->
+
+#### ApplicationView and ApplicationController
+
+<!--- {{{2 -->
+Ember is opinionated, and we believe that to be A Good Thing.
+Ember.Views should only be concerned with presentation and
+event-handling logic: e.g. recognizing a click event, hiding a widget on
+the screen.  Logic outside of this scope should be handled on an
+instance of a controller.  
+
+By Ember convention this should be the same name as the Ember.View
+subclass (minus the "View" substring) and with "Controller" appended.
+Thus an ApplicationView should have an ApplicationController.  
+
+The latter will be instantiated by the Application's #initialize()
+function *automatically*, provided the conventions are followed and will
+be initialized as the controller class name with the first letter
+lower-case e.g. App.applicationController.
+
+While this View/Controller structuring convention is handy, it is
+required in the case of ApplicationController and ApplicationView.
+ApplicationView is the top-level view of the entire application.  It is
+the View whose template contains the `{{outlet}}` call(s) into which
+other views will be injected.  It presents the hangars onto which other
+views can append themselves.  As such, Ember requires these classes to
+be defined on your Ember.Application subclass *before*
+Ember.Application#initialize() is called.
+
+<!--- }}}2 -->
+
+<!--- }}}1 -->
+
+### Step Three:  Embellishment
+
+<!--- {{{1 -->
+
+Some further embellishment of the routing application should help
+provide some additional insight as to what a filled-out Router looks
+like.  It will also be helpful for the following step where the
+programmatic traversal of routes is demonstrated.
+
+<!--- {{{2 --> 
     window.App = Ember.Application.create({
         ApplicationView: Ember.View.extend(),
         ApplicationController: Ember.Controller.extend(),
@@ -252,13 +323,13 @@ point, we will add a few additional sub-routes.
             }),
             shoes:  Ember.Route.extend({
               enter: function ( router ){
-                console.log("The index sub-state was entered.");
+                console.log("The shoes sub-state was entered.");
               },
               route: '/shoes'
             }),
             cars:  Ember.Route.extend({
               enter: function ( router ){
-                console.log("The index sub-state was entered.");
+                console.log("The cars sub-state was entered.");
               },
               route: '/cars'
             })
@@ -267,195 +338,33 @@ point, we will add a few additional sub-routes.
     });
     App.initialize();
 
+<!--- }}}2 --> 
+
 <!--- }}}1 --> 
 
-Routes can be transitioned to programmatically by invoking them.  In
-this example, one can affect a transition with
+### Step Four:  Programmatically Affecting State Change
+
+Routes can be transitioned to programmatically by invoking them.  This
+is accomplished by aquiring the router object.  As part of
+Ember.Application#initialize(), the Router class is instantiated as
+App.router.  
+
+In this example, one can affect a transition with
 `App.get('router').transitionTo('root.cars')`.  The console output will
-confirm that the sibling routes were moved through, but that the parent
-state **was not** moved through.
+confirm that the sibling routes were moved through, but note that the
+parent state **was not** moved through.
 
 With these tools in place, you're now able to see the that you have
-routable hash-bang URLS linked to distinct application states.  This in
-and of itself is very powerful, but the next quantum leap in
-productivity is when you link your view construction and composition to
-these changes in state.  We will address this presently.
+routable hash URLS linked to distinct application states.  This in
+and of itself is very powerful, but thus far our only visual feedback
+has been to print diagnostic data to the console.  In the next section
+we will join the routing machine to the view application.
 
-## Building Views from Within the Router
-
-
-#===============================================================================
-Still under development....
-#===============================================================================
-
-
-This is caused by the Ember.Router not being able to find a very special
-method called `connectOutlets.`  If the yin of translating URLs to
-routes is the `route` property, the yang of binding it to application
-state is the method `connectOutlets`.  By default `connectOutlets` is
-defined as Ember.K, that is, a function that returns the context in
-which it was found.  
-
-The Router needs more than this :).
-
-*This method is the linch-pin in understanding Ember.Router*.  
-
-Because of efforts undertaken by the Ember team, several conventions
-over configuration and some logical guesses occur in `connectOutlets`
-and `connectOutlet`.  This allows the method to be exceedingly terse,
-and powerful.
-
-In d06f4a4a, Trek Glowacki put in some great documentation that will
-help us out in the section "Changing View Hierarchy in Response To State
-Change".  
-
-Given the following connectOutlets definition:
-
-    connectOutlets: function(router, context) {
-      router.get('oneController').connectOutlet('another');
-    },
-
-Trek wrote:
-
-    This will detect the '{{outlet}}' portion of `oneController`'s view
-    (an instance of `App.OneView`) and fill it with a rendered instance of
-    `App.AnotherView` whose `context` will be the single instance of
-    `App.AnotherController` stored on the router in the `anotherController`
-    property.
-
-*Whoa!*  That is a lot of magic that is not clearly explained.  Here's
-how it works.  Let's follow Trek's description and figure out what we
-need to provide Ember.
-
-First, Trek tells that a whole lot of things happen as a result of this
-*one* line of code.  The only parts of the code that are configurable
-happen to be in the parentheses.  `oneController` and `another`.  The
-entire logical edifice Trek described follows as a result of applying
-the conventions to these to parameters.
-
-### Starting with `one`
-
-It works like this:  the `App wordController` is assumed to have a
-`App.WordView` which, in its `templateName` named file or in the
-compiled Handlebars code specified by `template` contains the
-`{{outlet}}` helper.  Obviously, then, we can see how Trek was able to
-write this:
-
-    This will detect the '{{outlet}}' portion of `oneController`'s view
-    (an instance of `App.OneView`)
-
-### Conjunction
-
-Trek then describes that the {{outlet}} will be filled with the
-"rendered instance of App.AnotherView.  The code that specifies this
-"interpolate into `{{outlet}}`" is `connectOutlet` (Nota Bene:  this is
-the _singular_ form!<sup>2</sup>).
-
-
-### The Rest
-
-Accordingly, the rest of the assignment must be "magicked" into place by
-providing the word "another."
-
-    `App.AnotherView` whose `context` will be the single instance of
-    `App.AnotherController` stored on the router in the `anotherController`
-    property.
-
-### The Shopping List
-
-Based on Trek's description it would seem we need the following:
-
-* App.OneController
-* App.OneView which has a template with `{{outlet}}`
-* App.AnotherController
-* App.AnotherView
-
-Let's put these four things into our code and see what happens:
-
-  window.App = Ember.Application.create({
-    AnotherController:  Ember.Controller.extend(),
-    AnotherView:  Ember.View.extend(),
-
-    OneController:  Ember.Controller.extend(),
-    OneView:  Ember.View.extend({
-      template:  Ember.Handlebars.compile("This is OneView: {{outlet}}")
-    }),
-
-    Router: Ember.Router.extend({
-      root:  Ember.Route.extend({
-        route: '/',
-        enter: function ( router ){
-          console.log("The root state was entered.");
-        },
-      })
-    })
-  });
-  App.initialize();
-
-We get a new error:  "Uncaught TypeError: Cannot call method
-'connectOutlet' of undefined."  This comes about because the root route
-needs to have its default route "wrapped."  Top-level `Ember.Route`s
-should be given a default `index` sub-route to function.  So let's wrap
-this guy up.<sup>3</sup>
-
-    window.App = Ember.Application.create({
-      AnotherController:  Ember.Controller.extend(),
-      AnotherView:  Ember.View.extend({
-        template:  Ember.Handlebars.compile("This is Another...")
-      }),
-
-      ApplicationController:  Ember.Controller.extend(),
-      ApplicationView:  Ember.View.extend({
-        template:  Ember.Handlebars.compile("This is ApplicationView:
-    {{outlet}}")
-      }),
-
-      Router: Ember.Router.extend({
-        root:  Ember.Route.extend({
-          index:  Ember.Route.extend({
-            route: '/',
-            enter: function ( router ){
-              console.log("The root state was entered.");
-            },
-            connectOutlets:  function ( router, context ){
-              router.get('applicationController').connectOutlet('another');
-            }
-          })
-        })
-      })
-    });
-    App.initialize();
-
-`connectOutlets` should look like the following:
-
-      connectOutlets: function(router, context) {
-        router.get('oneController').connectOutlet('another');
-      }
-
-`connectOutlet`'s first argument is `router`, that means the `Router`
-in whose scope this method is being typed!  `context` is an object full
-of data that will be used to fill out the view (parameters pulled out of
-the URL, or things looked up and fabricated in order for the view to be
-informative).
-
-
-Making this method seem  _even more_ mysterious is that it does a number
-of things _by convention_.  
-
-
-Let's try to make Trek's `connectOutlets` work in our code.  Let's
-define the smallest possible OneController and OneView:
-
-    OneController: Ember.ObjectController.extend(),
-    OneView:  Ember.View.extend({
-      template:  Ember.Handlebars.compile("<p>OneView has:</p> {{outlet}}")
-    }),
+## Managing Views from Within the Router
 
 
 
 
-
---------------------------------------------------------------------------------
 
 In the next section, we'll cover how you control these areas of the
 page. For now, let's look at how to structure your templates.
@@ -852,6 +761,10 @@ underlying property changes, this will "just work".
 
 Footnotes:
 
+1.  Ember.JS is even coded in a fashion such that it codifies these
+    definitions.  An `Ember.Route` is the result of taking an
+    Ember.State and mixing in a Mix-In called `Ember.Routable.`
+
 1.  For those wondering why this is the case, `Ember.Route =
     Ember.State.extend(Ember.Routable);`.  Ain't polymorphism grand?
 2.  This would imply that it is possible to perform multiple
@@ -878,5 +791,181 @@ just so.
     on root that all sidebars should be aware of).
 
 
+[EmberSite]: http://emberjs.com/ "Ember.JS Homepage"
+[StateMachine] http://en.wikipedia.org/wiki/Finite-state_machine "Wikipedia definition of a State Machine"
+[EmberRouter]: #
+[EmberRoute]: #
 
 
+
+#===============================================================================
+#===============================================================================
+TRASH
+
+This is caused by the Ember.Router not being able to find a very special
+method called `connectOutlets.`  If the yin of translating URLs to
+routes is the `route` property, the yang of binding it to application
+state is the method `connectOutlets`.  By default `connectOutlets` is
+defined as Ember.K, that is, a function that returns the context in
+which it was found.  
+
+The Router needs more than this :).
+
+*This method is the linch-pin in understanding Ember.Router*.  
+
+Because of efforts undertaken by the Ember team, several conventions
+over configuration and some logical guesses occur in `connectOutlets`
+and `connectOutlet`.  This allows the method to be exceedingly terse,
+and powerful.
+
+In d06f4a4a, Trek Glowacki put in some great documentation that will
+help us out in the section "Changing View Hierarchy in Response To State
+Change".  
+
+Given the following connectOutlets definition:
+
+    connectOutlets: function(router, context) {
+      router.get('oneController').connectOutlet('another');
+    },
+
+Trek wrote:
+
+    This will detect the '{{outlet}}' portion of `oneController`'s view
+    (an instance of `App.OneView`) and fill it with a rendered instance of
+    `App.AnotherView` whose `context` will be the single instance of
+    `App.AnotherController` stored on the router in the `anotherController`
+    property.
+
+*Whoa!*  That is a lot of magic that is not clearly explained.  Here's
+how it works.  Let's follow Trek's description and figure out what we
+need to provide Ember.
+
+First, Trek tells that a whole lot of things happen as a result of this
+*one* line of code.  The only parts of the code that are configurable
+happen to be in the parentheses.  `oneController` and `another`.  The
+entire logical edifice Trek described follows as a result of applying
+the conventions to these to parameters.
+
+### Starting with `one`
+
+It works like this:  the `App wordController` is assumed to have a
+`App.WordView` which, in its `templateName` named file or in the
+compiled Handlebars code specified by `template` contains the
+`{{outlet}}` helper.  Obviously, then, we can see how Trek was able to
+write this:
+
+    This will detect the '{{outlet}}' portion of `oneController`'s view
+    (an instance of `App.OneView`)
+
+### Conjunction
+
+Trek then describes that the {{outlet}} will be filled with the
+"rendered instance of App.AnotherView.  The code that specifies this
+"interpolate into `{{outlet}}`" is `connectOutlet` (Nota Bene:  this is
+the _singular_ form!<sup>2</sup>).
+
+
+### The Rest
+
+Accordingly, the rest of the assignment must be "magicked" into place by
+providing the word "another."
+
+    `App.AnotherView` whose `context` will be the single instance of
+    `App.AnotherController` stored on the router in the `anotherController`
+    property.
+
+### The Shopping List
+
+Based on Trek's description it would seem we need the following:
+
+* App.OneController
+* App.OneView which has a template with `{{outlet}}`
+* App.AnotherController
+* App.AnotherView
+
+Let's put these four things into our code and see what happens:
+
+  window.App = Ember.Application.create({
+    AnotherController:  Ember.Controller.extend(),
+    AnotherView:  Ember.View.extend(),
+
+    OneController:  Ember.Controller.extend(),
+    OneView:  Ember.View.extend({
+      template:  Ember.Handlebars.compile("This is OneView: {{outlet}}")
+    }),
+
+    Router: Ember.Router.extend({
+      root:  Ember.Route.extend({
+        route: '/',
+        enter: function ( router ){
+          console.log("The root state was entered.");
+        },
+      })
+    })
+  });
+  App.initialize();
+
+We get a new error:  "Uncaught TypeError: Cannot call method
+'connectOutlet' of undefined."  This comes about because the root route
+needs to have its default route "wrapped."  Top-level `Ember.Route`s
+should be given a default `index` sub-route to function.  So let's wrap
+this guy up.<sup>3</sup>
+
+    window.App = Ember.Application.create({
+      AnotherController:  Ember.Controller.extend(),
+      AnotherView:  Ember.View.extend({
+        template:  Ember.Handlebars.compile("This is Another...")
+      }),
+
+      ApplicationController:  Ember.Controller.extend(),
+      ApplicationView:  Ember.View.extend({
+        template:  Ember.Handlebars.compile("This is ApplicationView:
+    {{outlet}}")
+      }),
+
+      Router: Ember.Router.extend({
+        root:  Ember.Route.extend({
+          index:  Ember.Route.extend({
+            route: '/',
+            enter: function ( router ){
+              console.log("The root state was entered.");
+            },
+            connectOutlets:  function ( router, context ){
+              router.get('applicationController').connectOutlet('another');
+            }
+          })
+        })
+      })
+    });
+    App.initialize();
+
+`connectOutlets` should look like the following:
+
+      connectOutlets: function(router, context) {
+        router.get('oneController').connectOutlet('another');
+      }
+
+`connectOutlet`'s first argument is `router`, that means the `Router`
+in whose scope this method is being typed!  `context` is an object full
+of data that will be used to fill out the view (parameters pulled out of
+the URL, or things looked up and fabricated in order for the view to be
+informative).
+
+
+Making this method seem  _even more_ mysterious is that it does a number
+of things _by convention_.  
+
+
+Let's try to make Trek's `connectOutlets` work in our code.  Let's
+define the smallest possible OneController and OneView:
+
+    OneController: Ember.ObjectController.extend(),
+    OneView:  Ember.View.extend({
+      template:  Ember.Handlebars.compile("<p>OneView has:</p> {{outlet}}")
+    }),
+
+
+
+
+
+--------------------------------------------------------------------------------
