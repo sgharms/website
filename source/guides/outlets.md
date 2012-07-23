@@ -107,6 +107,7 @@ an `Ember.Router`.
 The most basic Ember.Application that makes use of a Router looks like
 this:
 
+<!--- {{{1 -->
     window.App = Ember.Application.create({
       ready: function(){
         console.log("Created App namespace");
@@ -117,6 +118,7 @@ this:
     });
 
     App.initialize();
+<!--- }}}1 -->
 
 Let's try running it and see what happens.  *It didn't work.*  This is OK.
 
@@ -134,6 +136,7 @@ free to keep it in.
 
 Let's do just that:
 
+<!--- {{{1 -->
     window.App = Ember.Application.create({
         Router: Ember.Router.extend({
           root:  Ember.Route.extend({
@@ -142,11 +145,15 @@ Let's do just that:
     });
     App.initialize();
 
+<!--- }}}1 -->
+
 Let's try running it and see what happens.  *It didn't work.*  This is
 OK.  This time we get a new, helpful error:  `Uncaught Error: assertion
 failed: ApplicationView and ApplicationController must be defined on
 your application`.  Apparently these two names are somehow special.
 Let's create them:
+
+<!--- {{{1 -->
 
     window.App = Ember.Application.create({
         ApplicationView: Ember.View.extend(),
@@ -158,38 +165,129 @@ Let's create them:
     });
     App.initialize();
 
+<!--- }}}1 -->
+
 And violà, we now have an Ember application that has a single route.  To
 make things more interesting, we can add an `enter` callback and print
 something to the console.
 
+<!--- {{{1 -->
     window.App = Ember.Application.create({
+        ApplicationView: Ember.View.extend(),
+        ApplicationController: Ember.Controller.extend(),
         Router: Ember.Router.extend({
           root:  Ember.Route.extend({
-            enter: function ( router ){
-              console.log("The root state was entered.");
+            enter: function(router) {
+                console.log("The root state was entered.");
             }
           })
         })
     });
     App.initialize();
+<!--- }}}1 -->
 
-All routes should have a propery called `route` defined on them to make
-it clear which navigable URL to which they map clear.  
 
+## The `root` route is special
+
+By default, when the Router is instantiated it automatically moves to
+the state `root`.  You can think of this as the "default landing place."  
+for the Router.
+
+It is important that you make several cognitive leaps here and accept
+that `root` is special.  `root` **is not a route** itself.  It is the
+box which contains the routes, but it is not a route.  It bears
+repeating:  **You cannot make this default landing place routable.**
+This is a source of nearly *endless* frustration for those new to the
+Router.
+
+For the purposes of this guide and the budding Emberist's sanity, it's
+important to make, on the `root` at least one sub-state.  By convention,
+this is called `index.`  There are several good reasons for this, but
+they are outside the scope of an introductory guide.  Let's just accept
+this bit of Ember magic and be thankful.
+
+
+<!--- {{{1 -->
     window.App = Ember.Application.create({
+        ApplicationView: Ember.View.extend(),
+        ApplicationController: Ember.Controller.extend(),
+
         Router: Ember.Router.extend({
           root:  Ember.Route.extend({
-            route: '/',
             enter: function ( router ){
               console.log("The root state was entered.");
-            }
+            },
+            index:  Ember.Route.extend({
+              enter: function ( router ){
+                console.log("The index sub-state was entered.");
+              },
+              route: '/'
+            })
           })
         })
     });
     App.initialize();
 
-When this is added, a new error appears in the console:  `Uncaught
-TypeError: Object hash has no method 'setURL' `.  
+<!--- }}}1 -->
+
+Adding sub-routes is a perfectly normal thing to do.  Those becoming
+familiar with the router should not be afraid of doing so.  To prove the
+point, we will add a few additional sub-routes.
+
+<!--- {{{1 --> 
+    window.App = Ember.Application.create({
+        ApplicationView: Ember.View.extend(),
+        ApplicationController: Ember.Controller.extend(),
+
+        Router: Ember.Router.extend({
+          root:  Ember.Route.extend({
+            enter: function ( router ){
+              console.log("The root state was entered.");
+            },
+            index:  Ember.Route.extend({
+              enter: function ( router ){
+                console.log("The index sub-state was entered.");
+              },
+              route: '/'
+            }),
+            shoes:  Ember.Route.extend({
+              enter: function ( router ){
+                console.log("The index sub-state was entered.");
+              },
+              route: '/shoes'
+            }),
+            cars:  Ember.Route.extend({
+              enter: function ( router ){
+                console.log("The index sub-state was entered.");
+              },
+              route: '/cars'
+            })
+          })
+        })
+    });
+    App.initialize();
+
+<!--- }}}1 --> 
+
+Routes can be transitioned to programmatically by invoking them.  In
+this example, one can affect a transition with
+`App.get('router').transitionTo('root.cars')`.  The console output will
+confirm that the sibling routes were moved through, but that the parent
+state **was not** moved through.
+
+With these tools in place, you're now able to see the that you have
+routable hash-bang URLS linked to distinct application states.  This in
+and of itself is very powerful, but the next quantum leap in
+productivity is when you link your view construction and composition to
+these changes in state.  We will address this presently.
+
+## Building Views from Within the Router
+
+
+#===============================================================================
+Still under development....
+#===============================================================================
+
 
 This is caused by the Ember.Router not being able to find a very special
 method called `connectOutlets.`  If the yin of translating URLs to
