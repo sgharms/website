@@ -292,6 +292,13 @@ views can append themselves.  As such, Ember requires these classes to
 be defined on your Ember.Application subclass *before*
 Ember.Application#initialize() is called.
 
+Given that Controllers are generally in the business of managing a model
+instance (a collection of things or a thing) two proxying subclasses of
+Ember.Controller exist:  `ObjectController` and `ArrayController`.
+Depending on the nature of your application, one of these is likely to
+provide extra help to your implementation.
+
+
 <!--- }}}2 -->
 
 <!--- }}}1 -->
@@ -362,24 +369,24 @@ we will join the routing machine to the view application.
 
 ## Managing Views from Within the Router
 
+### Specifying the ApplicationController and ApplicationView, the Default Route
 
+<!-- {{{1 -->
 
-
-
-In the next section, we'll cover how you control these areas of the
-page. For now, let's look at how to structure your templates.
 
 When the user first enters the application, the application is on the
 screen, and it has an empty outlet that the router will control. In
 Ember, an `outlet` is an area of a template that has its child template
-determined at runtime based on user interaction.
+determined at runtime based on the Route chosen by means of a user's
+navigational choice.
 
 <figure>
   <img src="/images/outlet-guide/application-choice.png">
 </figure>
 
-The template for the Application (`application.handlebars`) will look
-something like this:
+As the reader will recall the top-level view is the ApplicationView and
+that view's template (`application.handlebars`) will look something like
+this:
 
 ```
 <h1>My Application</h1>
@@ -388,18 +395,67 @@ something like this:
 ```
 
 By default, the router will initially enter the _list of posts_ state,
-and fill in the outlet with `posts.handlebars`. We will see later how
-this works exactly.
+and fill in the outlet with `posts.handlebars`. This is set in the
+Router's `root.index` Route's `redirectTo` property.   This takes the
+application out of the `root`-is-not-a-Route state and puts it into a
+sensible default route: posts.
+
+The example application will now look like:
+
+<!--- {{{2 --> 
+    window.App = Ember.Application.create({
+        ApplicationView: Ember.View.extend({
+          templateName:  'application'
+        }),
+        ApplicationController: Ember.Controller.extend(),
+
+        Router: Ember.Router.extend({
+          root:  Ember.Route.extend({
+            enter: function ( router ){
+              console.log("The root state was entered.");
+            },
+            index:  Ember.Route.extend({
+              enter: function ( router ){
+                console.log("The index sub-state was entered.");
+              },
+              route: '/',
+              redirectsTo:  'posts'
+            }),
+            posts:  Ember.Route.extend({
+              route: '/posts',
+            }),
+            shoes:  Ember.Route.extend({
+              route: '/shoes'
+            }),
+            cars:  Ember.Route.extend({
+              route: '/cars'
+            })
+          })
+        })
+    });
+    App.initialize();
+
+<!--- }}}2 --> 
+
+<!-- }}}1 -->
+
+
+### Swapping Out Views in the {{outlet}}
 
 <figure>
   <img src="/images/outlet-guide/list-of-posts.png">
 </figure>
 
-As expected, the _list of posts_ template will render a list of posts.
-Clicking on the link for an individual post will replace the contents of
-the application's outlet with the template for an individual post.
+As expected, the _list of posts_ template will render a list of posts
+into the outlet.  Clicking on the link for an individual post (e.g. an
+ordered list of them in the view presented by the posts Route) will
+replace the contents of the ApplicationView's template's outlet (i.e.
+the ordered list) with the template for an individual post.  
 
-The template will look like this:
+In both cases, the hash url should change so that this state could be
+routed to if the URL were shared.
+
+The template (`post.handlebars`) will look like this:
 
 ```
 {{#each post in controller}}
@@ -408,9 +464,8 @@ The template will look like this:
 {{/each}}
 ```
 
-When clicking on a link for an individual post, the application will
-move into the _individual post_ state, and replace `posts.handlebars` in
-the application's outlet with `post.handlebars`.
+The mechanism for moving from the `posts` route to the `post` route is
+the action `showPost`.
 
 <figure>
   <img src="/images/outlet-guide/individual-post.png">
@@ -420,7 +475,7 @@ In this case, the individual post also has an outlet. In this case, the
 outlet will allow the user to choose between viewing comments or
 trackbacks.
 
-The template for an individual post looks like this:
+The template for an individual post (`post.handlebars`) looks like this:
 
 ```
 <h1>{{title}}</h1>
@@ -439,43 +494,8 @@ Because `{{outlet}}` is a feature of all templates, as you go deeper
 into the route hierarchy, each route will naturally control a smaller
 part of the page.
 
-## How it Works
-
-Now that you understand the basic theory, let's take a look at how the
-router controls your outlets.
-
-### Templates, Controllers, and Views
-
-First, for every high-level handlebars template, you will also have a
-view and a controller with the same name. For example:
-
-* `application.handlebars`: the template for the main application view
-* `App.ApplicationController`: the controller for the template. The
-  initial variable context of `application.handlebars` is an instance of
-  this controller.
-* `App.ApplicationView`: the view object for the template.
-
-In general, you will use view objects to handle events and controller
-objects to provide data to your templates.
-
-Ember provides two primary kinds of controllers, `ObjectController` and
-`ArrayController`. These controllers serve as proxies for model objects
-and lists of model objects.
-
-We start with controllers rather than exposing the model objects
-directly to your templates so that you have someplace to put
-view-related computed properties and don't end up polluting your models
-with view concerns.
-
-You also connect `{{outlet}}`s using the template's associated
-controller.
-
-### The Router
-
-Your application's router is responsible for moving your application
-through its states in response to user action.
-
-Let's start with a simple router:
+Let's revisit our Router and slim it down to fit the nature of a
+blog-lite application.
 
 ```javascript
 App.Router = Ember.Router.extend({
@@ -495,12 +515,6 @@ App.Router = Ember.Router.extend({
   })
 });
 ```
-
-This router sets up three top-level states: an index state, a state that
-shows a list of posts, and a state that shows an individual post.
-
-In our case, we'll simply redirect the index route to the `posts` state.
-In other applications, you may want to have a dedicated home page.
 
 So far, we have a list of states, and our app will dutifully enter the
 `posts` state, but it doesn't do anything. When the application enters
@@ -765,8 +779,9 @@ Footnotes:
     definitions.  An `Ember.Route` is the result of taking an
     Ember.State and mixing in a Mix-In called `Ember.Routable.`
 
-1.  For those wondering why this is the case, `Ember.Route =
+2.  For those wondering why this is the case, `Ember.Route =
     Ember.State.extend(Ember.Routable);`.  Ain't polymorphism grand?
+
 2.  This would imply that it is possible to perform multiple
     `connectOutlet` actions in the `connectOutlets` function.  This is
 just so.
