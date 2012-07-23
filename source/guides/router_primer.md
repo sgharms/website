@@ -227,6 +227,13 @@ window.App = Ember.Application.create({
 });
 App.initialize();
 ```
+
+An initial load of this application looks like the following:
+
+
+<figure>
+  <img src="/images/routing-primer/initial-load-router.png">
+</figure>
 <!--- }}}2 -->
 
 <!--- }}}1 -->
@@ -355,6 +362,10 @@ In this example, one can affect a transition with
 `App.get('router').transitionTo('root.cars')`.  The console output will
 confirm that the sibling routes were moved through, but note that the
 parent state **was not** moved through.
+
+<figure>
+  <img src="/images/routing-primer/transition-to-in-router.png">
+</figure>
 
 With these tools in place, you're now able to see the that you have
 routable hash URLS linked to distinct application states.  This in and
