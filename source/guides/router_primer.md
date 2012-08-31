@@ -7,15 +7,15 @@
 Using the [Ember.Router][EmberRouter] is the preferred pattern for building large
 applications in [Ember.JS][EmberSite].  Ember's approach is to conceive
 of your application as a collection of states which can be accessed via
-both unique internal specifiers _as well as_ by URL paths that "route"
-to those states.
+both unique internal specifiers (a "route path") _as well as_ by URL locations
+that "route" to those states.
 
 This approach has many advantages:
 
-  * Employment of the [State Machine][StateMachine] pattern
+  * Employs the [State Machine][StateMachine] pattern
   * Functional states of the application define the URL, not vice-versa
   * Nesting of routes has built-in support
-  * Based on entry to these states, recursive chains of views can be
+  * On entry to these states, recursive chains of views can be
     automatically instantiated and inserted _without your having to manage them!_
 
 This guide is designed to help the reader accomplish the following:
@@ -25,13 +25,13 @@ This guide is designed to help the reader accomplish the following:
   * Lay the conceptual groundwork to ease understanding of the [Ember Application Structure][OutletGuide] guide
 
 The [Ember Application Structure][OutletGuide] guide introduces both the
-Ember.Router as a means for routing requests *as well as* documents how
-to present views based on those routed-to states.  While that document
-completely addresses both of these crticial components, this primer
-drills into the function of the Router and, it is hoped, makes the
-[Ember Application Structure][OutletGuide] guide more readily
-digestible.  As a first step, in understanding the Router, we establish
-a common vocabulary of activities and nouns.
+[Ember.Router][EmberRouter] as a means for routing requests *as well as*
+documents how to present views based on those routed-to states.  While that
+document completely addresses both of these crticial components, this primer
+drills into the function of the Router and, it is hoped, makes the 
+[Ember Application Structure][OutletGuide] guide more readily digestible.  As a first
+step, in understanding the Router, we establish a common vocabulary of
+activities and nouns.
 
 <!--- }}}1 -->
 
@@ -47,54 +47,55 @@ terms of art.
 ### Navigation
 
 Let us first consider the most visible activty associated with any web
-application:  *Navigation*.  Navigation is the act of following a link
-whose `href` attribute corresponds to a URL or entering a URL into some
-sort of HTTP processing application.  Navigation occurs when:
+application:  *navigation*.  Navigation is (1) the act of following a link whose
+`href` attribute corresponds to a URL or (2) entering a URL into some sort of
+HTTP processing application.  Navigation occurs when:
 
 * Lauren types `http://emberjs.com` into her browser
 * Erik writes a Ruby script that accesses an application's RESTful
   API at `http://example.com/api/widgets/list`
 
-In Ember, by default this looks like `http://example.com/#/posts` or
-`http://localhost:4567/#/cars`.  Throughout the rest of this guide the default
-location manager, "HashLocation,"  which separates the various states by means of `/#/` will be
-used.  If this syntax is not desired, the `location` property on the Router can
-be set to any `Ember.Object` that provides the methods specified in the
-`Ember.Location` API.  For more information, consult the `Ember.Location` API.
+In Ember, by default, this looks like `http://example.com/#/posts` or
+`http://localhost:4567/#/cars`.  Throughout the rest of this guide, the default
+location manager, "HashLocation,"  which signifies various routes by means of
+`/#/`, will be used.  If this syntax is not desired, the `location` property on
+the Router can be set to **any** `Ember.Object` that implements the methods specified
+in the `Ember.Location` API.  For more information, consult the `Ember.Location`
+[API][E.L.API].
 
 [E.L.API]: https://github.com/emberjs/ember.js/blob/master/packages/ember-routing/lib/location/api.js "Ember.Location API Source Code"
 
 ### Routing, State, and Route
 
-A *State* is a deterministic configuration of the application.  It can
-be imagined as a set of variables, a set of visible views, a set of
-instantiated objects, etc.  A state can be transitioned into by means of
-a unique trigger that activates this configuration.  In Ember this looks
-like `root.index` or `posts.post.comment`.
+A *State* is a deterministic configuration of the application.  It can be
+imagined as a set of variables, a set of visible views, a set of instantiated
+objects, etc.  A state is referencedd by a unique specifier called a
+*routePath*.  Ember *routePaths*  looks like `root.index` or
+`posts.post.comment`.
 
 When a *State* can be invoked by means of a navigable URL, it is said to
-be a *Route*.  *Routing* is the act of mapping a URL onto a *route*.
+be a *Route*.  *Routing* is the act of mapping a URL onto a *routePath*.
 Thus a correspondence between URL and State emerges:
-`http://example.com/#/posts` would sensibly map to
+`http://example.com/#/posts` would (sensibly) map to
 `posts.index`.
 
 ### Nesting
-
 
 As mentioned previously, Routes can be nested.  When a route has
 sub-routes it is called the *parent* route and its sub-routes are called
 *child* routes and / or *leaf* routes.
 
-**Parent routes are not-routable**.  They transfer the responsibility of
-instantiating the state to a series of child states.
+**Parent routes are not-routable**.  Their children bear the responsibility of
+constructing the state.
 
 <!--- }}}1 -->
 
 ## Intersection of Navigation URLs, Routes, and States
 
-Given that there is a correspondence between navigational endpoints
-(URLs), their routes, and those routes' "states," it is obvious that an
-Ember application that uses the Router is a [State Machine][StateMachine].
+Given that there is a correspondence between navigational endpoints (URLs),
+their routePaths, and those routes' "states," it is obvious that an Ember
+application that uses the Router is a [State Machine][StateMachine] that uses
+routePaths and / or URLs to change into the states.
 
 ## Summation of Definitions' Interplay and Roles
 
@@ -106,7 +107,7 @@ Ergo Ember will support navigable URLs:
   * http://example.com/app/#/about
   * http://example.com/app/#/users
 
-that, when parsed will correspond to some sort of "route" structure
+that, when parsed, will correspond to some sort of "route" structure
 whose names are arbitrarily linked to the endpoints' names:
 
     carsRoute: {
@@ -148,28 +149,37 @@ window.App = Ember.Application.create({
 App.initialize();
 ```
 
-When we run this application with our console open, we see the onReady
-event fire.  In the console `Created App namespace` appears.  But an
-error appears as well:   `Uncaught Error: assertion failed: Failed to
-transition to initial state "root" `.
+The result should look like the following when we run this application with our
+console open:
 
-The Router class of of an Ember application **must** contain an
-Ember.State called `root`.  As a legacy of Ember's history and
-inheritance chain, `State` is a synonym for `Route` (see discussion
-above).  As such, an `Ember.Route` called `root` must be
-added.
+<img src="/images/routing-primer/app-without-root-route.png">
+
+An error appears:   `Uncaught Error: assertion failed: Failed to transition to
+initial state "root" `.
+
+The Router class of of an Ember application **must** contain an Ember.State
+called `root`.  As a legacy of Ember's history and inheritance chain, `State` is
+a synonym for `Route` (see discussion above).  As such, the error message can be
+read as saying that the application could not find an `Ember.Route` called
+`root`.  Let's add it.
 
 The amended code will look like the following:
 
 ```javascript
 window.App = Ember.Application.create({
-    Router: Ember.Router.extend({
-      root:  Ember.Route.extend({
-      })
+  ready: function(){
+    console.log("Created App namespace");
+  },
+  Router: Ember.Router.extend({
+    root:  Ember.Route.extend({
     })
+  })
 });
+
 App.initialize();
 ```
+
+Let's give it a reload and see what happens....
 
 <!--- }}}1 -->
 
@@ -181,8 +191,10 @@ Running the previous code *again* produces an error:  `Uncaught Error: assertion
 failed: ApplicationView and ApplicationController must be defined on
 your application`.
 
-An Ember application using the router must define both
-ApplicationController and ApplicationView.  In conjunction with a `root`
+<img src="/images/routing-primer/no-app-controller-defined.png">
+
+An Ember application using the router **must** define **both**
+`ApplicationController` and `ApplicationView`.  In conjunction with a `root`
 route that has a routable child, these are the only requirements for an
 Ember application that makes use of the Router.
 
@@ -193,8 +205,10 @@ application:
 <!--- {{{2 -->
 ```javascript
 window.App = Ember.Application.create({
+
     ApplicationView: Ember.View.extend(),
     ApplicationController: Ember.Controller.extend(),
+
     Router: Ember.Router.extend({
       root:  Ember.Route.extend({
         index:  Ember.Route.extend({
@@ -206,17 +220,23 @@ window.App = Ember.Application.create({
 App.initialize();
 ```
 
+This will load cleanly, according to the console.  Lamentably this is a rather
+visually dull site because no visual data has been wired up.  We'll remedy that
+in a hurry.
+
 <!--- }}}2 -->
 
 Since this `ApplicationView` has no `template` attribute associated with it, it
-is hard to see that it is working.  We can add `console.log` actions to the
-`enter` property of the Ember.Routes (as specified in their superclass
-`Ember.State`'s API documentation).  Since we have no templates wired up to
-present content to the browser, another tool to help comprehension of the router
-works is to enable logging within the router.  This is accomplished by setting
-the `enableLogging` property to `true` within the router.  When the browser's
-debug console is open, the router will print helpful error messages beginning
-with `STATEMANAGER`.
+is desirable to add some *other* visual output to demonstrate that things are
+working.  We can add `console.log` actions to the `enter` property of the
+`Ember.Route`s (as specified in their superclass, [`Ember.State`][EmberState],'s
+API documentation).  
+
+Another tool for providing output that confirms that our implementation of the
+router is correct is to enable logging of the router's decision process.  To do
+so we set the `enableLogging` property to `true` within the router.  When the
+browser's debug console is open, the router will print helpful error messages
+beginning with `STATEMANAGER`.
 
 Lastly, as a point of formatting, when one to examines the Ember source one sees
 *liberal* use of vertical whitespace.  Just as vertical whitespace helps
@@ -226,12 +246,12 @@ use vertical whitespace to create logical groupings of routes.
 <!--- {{{2 -->
 ```javascript
 window.App = Ember.Application.create({
-    enableLogging:  true,
 
     ApplicationView: Ember.View.extend(),
     ApplicationController: Ember.Controller.extend(),
 
     Router: Ember.Router.extend({
+      enableLogging:  true,
       root:  Ember.Route.extend({
         enter:  function(){
           console.log("entered root");
@@ -337,6 +357,8 @@ window.App = Ember.Application.create({
     ApplicationController: Ember.Controller.extend(),
 
     Router: Ember.Router.extend({
+      enableLogging:  true,
+
       root:  Ember.Route.extend({
         enter: function ( router ){
           console.log("The root state was entered.");
@@ -403,6 +425,7 @@ sure you understand the Router's function and assumptions.
 
 [EmberSite]: http://emberjs.com/ "Ember.JS Homepage"
 [StateMachine]: http://en.wikipedia.org/wiki/Finite-state_machine "Wikipedia definition of a State Machine"
+[EmberState]: https://github.com/emberjs/ember.js/blob/master/packages/ember-states/lib/state.js "Ember.State Source Code"
 [EmberRouter]: https://github.com/emberjs/ember.js/blob/master/packages/ember-routing/lib/router.js "Ember.Router Source Code"
 [EmberRoute]: https://github.com/emberjs/ember.js/blob/master/packages/ember-routing/lib/route.js "Ember.Route Source"
 [OutletGuide]: http://emberjs.com/guides/outlets  "Ember Application Structure Guide"
