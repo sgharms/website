@@ -198,8 +198,14 @@ An Ember application using the router **must** define **both**
 route that has a routable child, these are the only requirements for an
 Ember application that makes use of the Router.
 
-The following snippet should be considered the standard, minimal, Ember
-application:
+<!--- }}}1 -->
+
+### Step Three: Minimum Viable Router
+
+<!--- {{{1 -->
+
+Let's address the error of the previous section and, in to doing, create the
+standard, minimal, Ember application:
 
 
 <!--- {{{2 -->
@@ -220,28 +226,34 @@ window.App = Ember.Application.create({
 App.initialize();
 ```
 
-This will load cleanly, according to the console.  Lamentably this is a rather
-visually dull site because no visual data has been wired up.  We'll remedy that
-in a hurry.
-
 <!--- }}}2 -->
 
-Since this `ApplicationView` has no `template` attribute associated with it, it
-is desirable to add some *other* visual output to demonstrate that things are
-working.  We can add `console.log` actions to the `enter` property of the
-`Ember.Route`s (as specified in their superclass, [`Ember.State`][EmberState],'s
-API documentation).  
+<!--- {{{2 -->
+This will load cleanly, according to the console.  
+
+Lamentably this is a rather visually dull site because no templates chocked full
+of beautiful HTML and styled by beautiful CSS have been wired up (yet).  While
+we'll remedy that in a hurry but there are other ways of printing diagnostic
+data.  It behooves the Ember developer to know some of these techniques for
+debugging and Router "sketching" purposes.
+
+
+First, we can add `console.log` actions to the `enter` or `exit` properties of an
+`Ember.Route`.  
 
 Another tool for providing output that confirms that our implementation of the
 router is correct is to enable logging of the router's decision process.  To do
-so we set the `enableLogging` property to `true` within the router.  When the
+so we set the `enableLogging` property to `true` within the Router.  When the
 browser's debug console is open, the router will print helpful error messages
 beginning with `STATEMANAGER`.
 
-Lastly, as a point of formatting, when one to examines the Ember source one sees
-*liberal* use of vertical whitespace.  Just as vertical whitespace helps
-separate logical "paragraphs" of operations in code, so too is it appropriate to
-use vertical whitespace to create logical groupings of routes.
+Lastly, as a point of formatting, when one to examines the Ember source one
+sees *liberal* use of vertical whitespace.  Just as vertical whitespace helps
+separate logical "paragraphs" of operations in code, so too is it appropriate
+to use vertical whitespace to create logical groupings of controllers and
+views.  Both of these, per the developer's &aelig;sthetic sensibility, might
+might be set off from simple properties.  Here's a minimum viable application
+with diagnostic data enabled.
 
 <!--- {{{2 -->
 ```javascript
@@ -278,14 +290,14 @@ An initial load of this application looks like the following:
 
 <!--- }}}1 -->
 
-### Aside:  Required Components
+### Steps One Through Three In Review:  Required Components
 
 <!--- {{{1 -->
 
 #### Root "Route"
 
 <!--- {{{2 -->
-While the guidelines given in Step Two are sufficient to create a
+While the guidelines given in Step Two are sufficient to **create** a
 baseline routing application, this section provides the "why" an
 application must meet the requirements.
 
@@ -301,54 +313,51 @@ should have a sub-Route, by convention, called `index` that answers to
 the navigable hash-bang url `/`; that is, the default URL to navigate to
 the application.
 
+This Route can either wire-up views or it can redirect to another Route.
+
 <!--- }}}2 -->
 
 #### ApplicationView and ApplicationController
 
 <!--- {{{2 -->
 Ember is opinionated, and we believe that to be A Good Thing.
+
 Ember.Views should only be concerned with presentation and
 event-handling logic: e.g. recognizing a click event, hiding a widget on
-the screen.  Logic outside of this scope should be handled on an
-instance of a controller.
+the screen, etc.  Logic outside of this scope should be handled on an
+instance of a controller which has a tight coupling to the view.
 
-By Ember convention this should be the same name as the Ember.View
-subclass (minus the "View" substring) and with "Controller" appended.
-Thus an ApplicationView should have an ApplicationController.
+We can see the tightness of this coupling by virtue of the naming convention.
+For views that will be wired up by the Router, when given a base name (e.g
+'BaseName'), there should be an `App.BaseNameView` and an
+`App.BaseNameController.` These router-wire-able types of views will be
+automatically instantiated by the call to `#initialize()` into instances
+corresponding to the convention such that `BaseNameView`'s instance is
+`App.baseNameView` and the controller, similarly, becomes
+`App.baseNameController`.
 
-The latter will be instantiated by the Application's #initialize()
-function *automatically*, provided the conventions are followed and will
-be initialized as the controller class name with the first letter
-lower-case e.g. App.applicationController.
-
-While this View/Controller structuring convention is handy, it is
-required in the case of ApplicationController and ApplicationView.
-ApplicationView is the top-level view of the entire application.  It is
-the View whose template contains the `{{outlet}}` call(s) into which
-other views will be injected.  It presents the hangars onto which other
-views can append themselves.  As such, Ember requires these classes to
-be defined on your Ember.Application subclass *before*
-Ember.Application#initialize() is called.
-
-Given that Controllers are generally in the business of managing a model
-instance (a collection of things or a thing) two proxying subclasses of
-Ember.Controller exist:  `ObjectController` and `ArrayController`.
-Depending on the nature of your application, one of these is likely to
-provide extra help to your implementation.
-
+As we seek to "wire up" these view instances in the router, they will need
+a primordial "thing" on which to hang.  They will need a special view that
+is guaranteed to exist.  These instances need a primordial `Em.View` on which
+to "hang."  By Ember convention that primoridal, base view is an instance of
+`App.ApplicationView`  called `App.applicationView`.  Its associated controller
+is, as the conventions should help you surmise, `App.applicationController`.
+It is for this reason that Ember threw an error in Step II when we defined
+a router-based application *without* these two critical classes.
 
 <!--- }}}2 -->
 
 <!--- }}}1 -->
 
-### Step Three:  Embellishment
+<!--- }}}1 -->
+
+### Step Four:  A New Hope
 
 <!--- {{{1 -->
 
-Some further embellishment of the routing application should help
-provide some additional insight as to what a filled-out Router looks
-like.  It will also be helpful for the following step where the
-programmatic traversal of routes is demonstrated.
+Let us now create a new Router-implementing Ember application.  We need
+something slightly less trivial so that we may discern the state-transitioning
+features afforded by the Router.
 
 <!--- {{{2 -->
 ```javascript
@@ -389,9 +398,7 @@ App.initialize();
 
 <!--- }}}2 -->
 
-<!--- }}}1 -->
-
-### Step Four:  Programmatically Affecting State Change
+### Step Five:  Programmatically Affecting State Change
 
 <!--- {{{1 -->
 
@@ -400,28 +407,99 @@ is accomplished by aquiring the router object.  As part of
 Ember.Application#initialize(), the Router class is instantiated as
 App.router.
 
-In this example, one can affect a transition with
-`App.get('router').transitionTo('root.cars')`.  The console output will
-confirm that the sibling routes were moved through, but note that the
-parent state **was not** moved through.
+In this example, one can affect a transition by executing the following
+in the console:  `App.get('router').transitionTo('root.cars')`  
+
+The console output will confirm that the sibling routes were moved through, but
+note that the parent state **was not** moved through.  More notably, check
+out that url:  `http://example.com/#/cars`.  Whoa, what happened there.
+
+Recall that in the introduction we said that each state was uniquely identified
+by a routePath (e.g. `root.cars`) that could be uniquely bonded to a URL.  By
+changing a state by means of `transitionTo`  and a `routePath` we affect a
+change in the URL, contrawise one should expect that a change in the URL
+navigated to should afect a change in the state represented.
+
+That is the purest essence of the Ember.router:  an Ember.StateMachine whose
+states are uniquely addressable via `routePath`s OR URLs.
 
 <figure>
-  <img src="/images/routing-primer/transition-to-in-router.png">
+  **TODO** BROKEN:  Update Image asset
 </figure>
 
-With these tools in place, you're now able to see the that you have
-routable hash URLS linked to distinct application states.  This in and
-of itself is very powerful, but thus far our only visual feedback has
-been to print diagnostic data to the console.  In the [Ember Application
-Structure][OutletGuide] guide, the binding of views and controllers to
-Routes is demonstrated.
+The next step is to move from merely logging diagnostic data based on Route /
+State entry, but to wire up views in the router based on entry into those
+states.  
 
-## Conclusion
+<!--- }}}1 -->
 
-You now have an understanding of the Router.  Grasping the linking of
-Routes to views should prove a snap!  That's the focus of the [Ember
-Application Structure][OutletGuide] guide.  As always, it pays to make
-sure you understand the Router's function and assumptions.
+### Step Six:  Wiring Up Views in Routes: The {{outlet}}
+
+<!--- {{{1 -->
+Above we mentioned that the primordial view is the `ApplicationView`.  We can imagine that its associated template would likely have some skeletal HTML in it:  a company logo, a static footer, and some other assets.  This Em.View can make it possible for other views to be wired up to it upon state entry by including the Em.Handlebars helper `{{outlet}}`.
+
+{{outlet}} basically means "here's a point of insertion at which you can attach another Em.View."
+
+If you template only has one point of insertion it you can simply use
+`{{outlet}}`.  Frequently we will want to have a number of "named" outlets.
+When that is the case we name them by using `{{outlet navBar}}` or `{{outlet
+uglyFooter}}`.
+
+Let's take our last simple bit of code and set it up for view wiring.  To keep
+things simple, we will only have one outlet.
+
+<!--- {{{2 -->
+```javascript
+window.App = Ember.Application.create({
+    ApplicationView: Ember.View.extend({
+      template:  Ember.Handlebars.compile("<p>App.View:</p><p>{{outlet}}</p>"),
+    }),
+    ApplicationController: Ember.Controller.extend(),
+
+    Router: Ember.Router.extend({
+      enableLogging:  true,
+
+      root:  Ember.Route.extend({
+        enter: function ( router ){
+          console.log("The root state was entered.");
+        },
+        index:  Ember.Route.extend({
+          enter: function ( router ){
+            console.log("The index sub-state was entered.");
+          },
+          route: '/'
+        }),
+        shoes:  Ember.Route.extend({
+          enter: function ( router ){
+            console.log("The shoes sub-state was entered.");
+          },
+          route: '/shoes'
+        }),
+        cars:  Ember.Route.extend({
+          enter: function ( router ){
+            console.log("The cars sub-state was entered.");
+          },
+          route: '/cars'
+        })
+      })
+    })
+});
+App.initialize();
+```
+
+<!--- }}}2 -->
+
+When we view this application, the in-line template (ApplicationView.template)
+is rendered to the screen.  Also in this `template` there was teh ability to
+connect something to its `{{outlet}}` "hook."  We didn't do that, but Em.Routes
+afford a way to connect outlets.  In fact, they allow you to do so in a method
+called, fittingly, `connectOutlets`.  **TODO**:  Write more...
+
+<!--- }}}1 -->
+
+----
+
+**More Coming...**
 
 [EmberSite]: http://emberjs.com/ "Ember.JS Homepage"
 [StateMachine]: http://en.wikipedia.org/wiki/Finite-state_machine "Wikipedia definition of a State Machine"
@@ -430,4 +508,4 @@ sure you understand the Router's function and assumptions.
 [EmberRoute]: https://github.com/emberjs/ember.js/blob/master/packages/ember-routing/lib/route.js "Ember.Route Source"
 [OutletGuide]: http://emberjs.com/guides/outlets  "Ember Application Structure Guide"
 
-<!-- vim: set fdm=marker ft=markdown: -->
+<!-- vim: set fdm=marker ft=markdown tw=79: -->
