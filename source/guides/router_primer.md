@@ -55,7 +55,14 @@ sort of HTTP processing application.  Navigation occurs when:
 * Erik writes a Ruby script that accesses an application's RESTful
   API at `http://example.com/api/widgets/list`
 
-In Ember this looks like `http://example.com/#/posts` or `http://localhost:4567/#/cars`.
+In Ember, by default this looks like `http://example.com/#/posts` or
+`http://localhost:4567/#/cars`.  Throughout the rest of this guide the default
+location manager, "HashLocation,"  which separates the various states by means of `/#/` will be
+used.  If this syntax is not desired, the `location` property on the Router can
+be set to any `Ember.Object` that provides the methods specified in the
+`Ember.Location` API.  For more information, consult the `Ember.Location` API.
+
+[E.L.API]: https://github.com/emberjs/ember.js/blob/master/packages/ember-routing/lib/location/api.js "Ember.Location API Source Code"
 
 ### Routing, State, and Route
 
@@ -201,16 +208,29 @@ App.initialize();
 
 <!--- }}}2 -->
 
-Since this application has no views associated with it, it is hard to
-see that it is working.  We can add `console.log` actions to the `enter`
-property of the Ember.Routes (as specified in their superclass
-Ember.State's API documentation).
+Since this `ApplicationView` has no `template` attribute associated with it, it
+is hard to see that it is working.  We can add `console.log` actions to the
+`enter` property of the Ember.Routes (as specified in their superclass
+`Ember.State`'s API documentation).  Since we have no templates wired up to
+present content to the browser, another tool to help comprehension of the router
+works is to enable logging within the router.  This is accomplished by setting
+the `enableLogging` property to `true` within the router.  When the browser's
+debug console is open, the router will print helpful error messages beginning
+with `STATEMANAGER`.
+
+Lastly, as a point of formatting, when one to examines the Ember source one sees
+*liberal* use of vertical whitespace.  Just as vertical whitespace helps
+separate logical "paragraphs" of operations in code, so too is it appropriate to
+use vertical whitespace to create logical groupings of routes.
 
 <!--- {{{2 -->
 ```javascript
 window.App = Ember.Application.create({
+    enableLogging:  true,
+
     ApplicationView: Ember.View.extend(),
     ApplicationController: Ember.Controller.extend(),
+
     Router: Ember.Router.extend({
       root:  Ember.Route.extend({
         enter:  function(){
@@ -386,3 +406,5 @@ sure you understand the Router's function and assumptions.
 [EmberRouter]: https://github.com/emberjs/ember.js/blob/master/packages/ember-routing/lib/router.js "Ember.Router Source Code"
 [EmberRoute]: https://github.com/emberjs/ember.js/blob/master/packages/ember-routing/lib/route.js "Ember.Route Source"
 [OutletGuide]: http://emberjs.com/guides/outlets  "Ember Application Structure Guide"
+
+<!-- vim: set fdm=marker ft=markdown: -->
