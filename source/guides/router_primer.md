@@ -356,8 +356,8 @@ a router-based application *without* these two critical classes.
 <!--- {{{1 -->
 
 Let us now create a new Router-implementing Ember application.  We need
-something slightly less trivial so that we may discern the state-transitioning
-features afforded by the Router.
+something slightly less trivial than what has been demonstrated before so that
+we may discern the state-transitioning features afforded by the Router.
 
 <!--- {{{2 -->
 ```javascript
@@ -396,57 +396,106 @@ window.App = Ember.Application.create({
 App.initialize();
 ```
 
+This application follows the format of the previous application but with the
+addition that the routes now each have an `enter` callback which will be called
+when that state is entered.  There is also an `exit` callback.
+
 <!--- }}}2 -->
 
 ### Step Five:  Programmatically Affecting State Change
 
 <!--- {{{1 -->
 
-Routes can be transitioned to programmatically by invoking them.  This
-is accomplished by aquiring the router object.  As part of
-Ember.Application#initialize(), the Router class is instantiated as
-App.router.
+Routes can be transitioned into programmatically by invoking 
+`Ember.Router#transitionTo('stateName')`.
 
-In this example, one can affect a transition by executing the following
-in the console:  `App.get('router').transitionTo('root.cars')`  
+In the web console of a browser running the code provided in the previous
+section, you can try out the first method by invoking the `transitionTo` method
+on the `App.Router` class's instance, `App.router` like so:
+`App.router.transitionTo('root.cars')`.  Two important things happen:
 
-The console output will confirm that the sibling routes were moved through, but
-note that the parent state **was not** moved through.  More notably, check
-out that url:  `http://example.com/#/cars`.  Whoa, what happened there.
+1. The [State Manager][StateManager] logging output states that the `cars
+sub-state was entered` 
+1. The URL slug becomes affixed with `#/cars` 
+
+The first point is the expected result under the principle of least surprise,
+we changed the state.  The second result is that the slug updated the URL to
+express a URL path that uniquely maps to a state in the state machine.
+
+We can change to the other state with: `App.router.transitionTo('root.shoes')`.
+Again, as expected, we enter that Route state and see a change in the URL slug to
+`#/shoes`.
+
+It is worth noting that when transferring between sibling states (`cars` to
+`shoes`) the parent state was *not* entered.  This is confirmed both my the
+state manager's debugging  output as well as by the non-execution of the
+`root.index`'s `enter()` callback.
 
 Recall that in the introduction we said that each state was uniquely identified
 by a routePath (e.g. `root.cars`) that could be uniquely bonded to a URL.  By
-changing a state by means of `transitionTo`  and a `routePath` we affect a
-change in the URL, contrawise one should expect that a change in the URL
-navigated to should afect a change in the state represented.
+changing a state by means of `transitionTo` and a `routePath` we affect a
+change in the URL.  Contrawise one should expect that a change in the URL
+navigated to should afect a change in the state loaded &#x2014; *and that is
+exactly what happens!*
 
-That is the purest essence of the Ember.router:  an Ember.StateMachine whose
-states are uniquely addressable via `routePath`s OR URLs.
+That is the purest essence of the Ember.Router:  an
+[Ember.StateManager][StateManager] whose states are uniquely addressable via
+`routePath`s **or** URLs.
 
 <figure>
-  **TODO** BROKEN:  Update Image asset
+  <img src="/images/routing-primer/move-between-routes-transitionto-urlslug.png">
 </figure>
 
-The next step is to move from merely logging diagnostic data based on Route /
-State entry, but to wire up views in the router based on entry into those
-states.  
+The exact methods by which the Router knows how to translate a URL slug into a
+series of objects required for a state is controlled my a method on Route
+called `deserialize`.  The means by which a state expresses its required
+components based on the contents of the url is controlled by a method called
+`serialize.`  We'll see more about the control and customization of objects
+based on route states later on in this guide, but what's important to take away
+is that Ember provides means for easily controlling what needs to happen based
+on the slug and for fabricating a string (the slug) which were it to be passed
+to the router via URL navigation or bookmark would allow it to pull up the
+right data objects needed to fulfill the expectations of the Route.
+
+Let's set that concern aside for a moment and look at how to move our
+interaction with the app from merely logging diagnostic data based on Route /
+State change to something more visually stimulating.  
 
 <!--- }}}1 -->
 
 ### Step Six:  Wiring Up Views in Routes: The {{outlet}}
 
 <!--- {{{1 -->
-Above we mentioned that the primordial view is the `ApplicationView`.  We can imagine that its associated template would likely have some skeletal HTML in it:  a company logo, a static footer, and some other assets.  This Em.View can make it possible for other views to be wired up to it upon state entry by including the Em.Handlebars helper `{{outlet}}`.
 
-{{outlet}} basically means "here's a point of insertion at which you can attach another Em.View."
+Above we mentioned that the primordial view is the `ApplicationView`.  We can
+imagine that its associated template would likely have some skeletal, static
+HTML in it:  a logo, a static footer, and some other assets.
 
-If you template only has one point of insertion it you can simply use
-`{{outlet}}`.  Frequently we will want to have a number of "named" outlets.
-When that is the case we name them by using `{{outlet navBar}}` or `{{outlet
-uglyFooter}}`.
+But there are also going to be components whose structural position always
+remains the same, but whose content changes.  We could imagine that a "top
+navigation" area (or "View") will always happen in the same place, but whose
+data source might contain different content when loaded (e.g. "logged-in
+navigation" or "admin navigation");
 
-Let's take our last simple bit of code and set it up for view wiring.  To keep
-things simple, we will only have one outlet.
+The place where this appropriate-to-the-State View "plugs in" is an "`outlet`."
+While "outlet" has many subtle meanings in English, in Ember case it means the
+place where Views get plugged in.
+
+We denote an outlet by putting the Em.Handlebars helper `{{outlet}}` inside of
+our Views' template code.  A template can have multiple outlets which are
+separated by name (e.g. `{{outlet topNav }}` and `{{outlet leftNav}}`).  In many 
+templates, however, there will be only one `outlet`.
+
+For didactic purposes this guide will **not** be putting outlet declarations
+inside of another file.  Tutorials more generally focused on Ember's basic
+use cover the use of how a `templateName` property in a View can be used
+to refer to a `<script>`-based Handlebars template.  Since the views in this
+document are contrived, and to make for easier phone / tablet reading, the
+template code will be compiled *in situ* in the Views. 
+
+The following listing creates a view at the top level, the requisite
+`ApplicationView`, and gives it a simple template with a single `outlet`
+statement.  
 
 <!--- {{{2 -->
 ```javascript
@@ -489,11 +538,13 @@ App.initialize();
 
 <!--- }}}2 -->
 
-When we view this application, the in-line template (ApplicationView.template)
-is rendered to the screen.  Also in this `template` there was teh ability to
-connect something to its `{{outlet}}` "hook."  We didn't do that, but Em.Routes
-afford a way to connect outlets.  In fact, they allow you to do so in a method
-called, fittingly, `connectOutlets`.  **TODO**:  Write more...
+When this application is loaded, the in-line template
+(`ApplicationView.template`) is rendered to the screen.  While the `template`'s
+Handlebars code presented the opportunity to connect something to its
+`{{outlet}}` "hook,"  we didn't do that and thus nothing else was rendered.
+
+Em.Routes afford a way to connect outlets programmatically.  One does so in a
+method called, fittingly, `connectOutlets`.  
 
 <!--- }}}1 -->
 
@@ -507,5 +558,6 @@ called, fittingly, `connectOutlets`.  **TODO**:  Write more...
 [EmberRouter]: https://github.com/emberjs/ember.js/blob/master/packages/ember-routing/lib/router.js "Ember.Router Source Code"
 [EmberRoute]: https://github.com/emberjs/ember.js/blob/master/packages/ember-routing/lib/route.js "Ember.Route Source"
 [OutletGuide]: http://emberjs.com/guides/outlets  "Ember Application Structure Guide"
+[StateManager]:  https://github.com/emberjs/ember.js/blob/master/packages/ember-states/lib/state_manager.js "Ember StateManager"
 
 <!-- vim: set fdm=marker ft=markdown tw=79: -->
