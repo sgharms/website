@@ -654,6 +654,100 @@ The application should look something like this:
 
 <img src="/images/routing-primer/initial-view-wireup.png">
 
+To show the flexibility the Router affords via `connectOutlets`, here's an example of how to use `{{outlets}}` in more complex views:
+
+<!-- {{{2 -->
+```javascript
+window.App = Ember.Application.create({
+    ApplicationView: Ember.View.extend({
+      template:  Ember.Handlebars.compile("<p>App.View:</p><p>{{outlet alpha}}</p><hr/>{{outlet beta}}"),
+    }),
+    ApplicationController: Ember.Controller.extend(),
+
+    ShoesView:  Em.View.extend({
+      template:  Ember.Handlebars.compile("<p>App.ShoesView:</p><p>{{outlet list}}</p>"),
+    }),
+    ShoesController: Ember.Controller.extend(),
+
+    ListOfShoesController:  Em.ArrayController.extend(),
+    ListOfShoesView:  Em.View.extend({
+      template:  Em.Handlebars.compile("{{#each shoe in controller}}<li>{{shoe.name}}</li>{{/each}}"),
+    }),
+
+    FooterController:  Em.ObjectController.extend(),
+    FooterView:  Em.View.extend({
+      template:  Em.Handlebars.compile("This is the footer: {{message}}"),
+    }),
+
+    Router: Ember.Router.extend({
+      enableLogging:  true,
+
+      root:  Ember.Route.extend({
+        enter: function ( router ){
+          console.log("The root state was entered.");
+        },
+        index:  Ember.Route.extend({
+          enter: function ( router ){
+            console.log("The index sub-state was entered.");
+          },
+          route: '/'
+        }),
+        shoes:  Ember.Route.extend({
+          enter: function ( router ){
+            console.log("The shoes sub-state was entered.");
+          },
+          route: '/shoes',
+          connectOutlets:  function(router){
+            router.get('applicationController').connectOutlet('beta', 'footer', { message: "agony"} );
+            router.get('applicationController').connectOutlet('alpha', 'shoes');
+
+            var listOfShoes = [ { name: "Rainbow Sandals" }, { name:  "Strappy shoes" }, 
+                { name:  "Blue Suede" } ];
+            router.get('shoesController').connectOutlet('list', 'listOfShoes', listOfShoes);
+
+          }
+        }),
+        cars:  Ember.Route.extend({
+          enter: function ( router ){
+            console.log("The cars sub-state was entered.");
+          },
+          route: '/cars'
+        })
+      })
+    })
+});
+App.initialize();
+```
+<!-- }}}2 -->
+
+Using the information thus far provided, the documentation for connectOutlet,
+and some patience, the flexibility and power of the `connectOutlets` method
+should help you see ways of building powerful views whose components can be
+easiely swapped out: no longer must you troll through endless template code
+removing (or adding) conditional clauses.  Simply create a new view / controller
+pair, unplug the old, and plug in the new.  
+
+The Router's design opens many exciting new possibilities: A/B testing, "admin"
+interfaces versus "regular" interfaces, portable layouts, etc.
+
+Now that we've demonstrated how to wire up a substantial view quickly, we need
+to provide a way, via the views, to affect Route state change.  This is
+addressed in the following section
+
+
+<!--- }}}1 -->
+
+<!--- {{{1 -->
+
+## Moving from Route to Route
+
+Recall that we have already demonstrated that routes can be changed with calls
+to `App.get('router').transitionTo('someState')`.  This change can also be
+triggered by, effectively, executing the `transitionTo` action as a result of a
+browser event: typically, click.  This section will show how to change state as
+a result of an event.  The subsequent section will cover how to effect state
+change as a result of the URL slug: the case that truly lives up to the name
+"Router."
 
 <!--- }}}1 -->
 
