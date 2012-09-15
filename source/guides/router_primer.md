@@ -12,7 +12,7 @@ that "route" to those states.
 
 This approach has many advantages:
 
-  * Employs the [State Machine][StateMachine] pattern
+  * It Employs the [State Machine][StateMachine] pattern
   * Functional states of the application define the URL, not vice-versa
   * Nesting of routes has built-in support
   * On entry to these states, recursive chains of views can be
@@ -21,17 +21,8 @@ This approach has many advantages:
 This guide is designed to help the reader accomplish the following:
 
   * Understand key terminology
-  * Set up an [Ember.Router][EmberRouter]
-  * Lay the conceptual groundwork to ease understanding of the [Ember Application Structure][OutletGuide] guide
-
-The [Ember Application Structure][OutletGuide] guide introduces both the
-[Ember.Router][EmberRouter] as a means for routing requests *as well as*
-documents how to present views based on those routed-to states.  While that
-document completely addresses both of these crticial components, this primer
-drills into the function of the Router and, it is hoped, makes the
-[Ember Application Structure][OutletGuide] guide more readily digestible.  As a first
-step, in understanding the Router, we establish a common vocabulary of
-activities and nouns.
+  * Set up an [Ember.Router][EmberRouter] in a series of small,
+    incremental improvements upon a minimal, viable application
 
 <!--- }}}1 -->
 
@@ -41,52 +32,74 @@ activities and nouns.
 
 In common parlance, several of the activities that are essential to the
 router's function are conflated.  To ensure clarity this guide defines
-*navigation*, *routing*, *state* / *route*, and *nesting* as specific
-terms of art.
+several terms of art.
 
 ### Navigation
 
-Let us first consider the most visible activty associated with any web
-application:  *navigation*.  Navigation is (1) the act of following a link whose
-`href` attribute corresponds to a URL or (2) entering a URL into some sort of
-HTTP processing application.  Navigation occurs when:
+Navigation is (1) the act of following a link whose `href` attribute
+corresponds to a URL or (2) entering a URL into some sort of HTTP
+processing application.  Navigation occurs when:
 
 * Lauren types `http://emberjs.com` into her browser
 * Erik writes a Ruby script that accesses an application's RESTful
   API at `http://example.com/api/widgets/list`
 
-In Ember, by default, this looks like `http://example.com/#/posts` or
-`http://localhost:4567/#/cars`.  Throughout the rest of this guide, the default
-location manager, "HashLocation,"  which signifies various routes by means of
-`/#/`, will be used.  If this syntax is not desired, the `location` property on
-the Router can be set to **any** `Ember.Object` that implements the methods specified
-in the `Ember.Location` API.  For more information, consult the `Ember.Location`
-[API][E.L.API].
-
-[E.L.API]: https://github.com/emberjs/ember.js/blob/master/packages/ember-routing/lib/location/api.js "Ember.Location API Source Code"
-
-### Routing, State, and Route
+### State
 
 A *State* is a deterministic configuration of the application.  It can be
-imagined as a set of variables, a set of visible views, a set of instantiated
-objects, etc.  A state is referencedd by a unique specifier called a
-*routePath*.  Ember *routePaths*  looks like `root.index` or
-`posts.post.comment`.
+imagined as a set of variables, a set of rendered views, a set of instantiated
+objects, etc.  `State`s are collected into [StateManager][StateManager]s.
 
-When a *State* can be invoked by means of a navigable URL, it is said to
-be a *Route*.  *Routing* is the act of mapping a URL onto a *routePath*.
-Thus a correspondence between URL and State emerges:
-`http://example.com/#/posts` would (sensibly) map to
-`posts.index`.
+### State Manager
+
+A container that holds an arbitrary number of unique states.
+
+### Router
+
+While Ember supports having many `StateManagers`, that address a wide variety
+of purposes (handling what's in a status console, toggling lightbox effects,
+etc.), a StateManager dedicated to bringing about certain application states is
+a Router.  Fittingly, in the Ember source, a `Router` has an is a sublcass of
+`StateManager`.
+
+### Route
+
+Just as a Router is a special case of a `StateManager`, a `Router`'s
+consitituent `State`s are given the special designation of `Route`.
+
+### RoutePath 
+
+A `Route` is referred to by a unique specifier called a routePath.  Ember
+*routePaths*  look like `root.index` or `posts.post.comment`.
+
+### Routing
+
+Routing is the act of mapping a URL onto a routePath.  Thus a correspondence
+between URL and State emerges: `http://example.com/#/posts` would (sensibly)
+map to `posts.index`.
+
+### Routable URL
+
+A routable URL is a URL that triggers a transition to a Route.  In Ember, by
+default, this looks like `http://example.com/#/posts`,
+`http://localhost:4567/#/cars`, `http://localhost:4567/#/post/show/1`.  
+
+The relevant part of the url is the part that is featured after the `#/`.  In
+the descriptions above, the Routable URLs will trigger the Router to change
+state to either `posts`, `cars`, or `post.show`.  If the use of this
+"hash-slash" delimiter is not desirable, it can easily be
+changed<sup>[1](#location-manager)</sup>.
 
 ### Nesting
 
-As mentioned previously, Routes can be nested.  When a route has
-sub-routes it is called the *parent* route and its sub-routes are called
-*child* routes and / or *leaf* routes.
+As mentioned previously, Routes can be nested.  When a route has sub-routes it
+is called the *parent* route and its sub-routes are called *child* routes and /
+or *leaf* routes.
 
 **Parent routes are not-routable**.  Their children bear the responsibility of
-constructing the state.
+constructing the state.  Otherwise said, all routable states **must be** leaf
+routes.  A typical RoutePath for a nested route would be `post.show` and its
+matching URL would be `#/post/show/1`.
 
 <!--- }}}1 -->
 
@@ -97,39 +110,90 @@ their routePaths, and those routes' "states," it is obvious that an Ember
 application that uses the Router is a [State Machine][StateMachine] that uses
 routePaths and / or URLs to change into the states.
 
-## Summation of Definitions' Interplay and Roles
+## Summation of Definitions' Interplay and Looking Ahead
 
 <!--- {{{1 -->
 
-Ergo Ember will support navigable URLs:
+Given the preceeding definitions, we should be able to imagine an Ember
+application that uses the Router.  While the exact how-to will come next, if we
+wanted to talk about shoes and cars, we would imagine an application that does
+something when handed URLs like:
 
-  * http://example.com/app/#/posts
-  * http://example.com/app/#/about
-  * http://example.com/app/#/users
+  * http://example.com/app/#/shoes
+  * http://example.com/app/#/shoe/blue-suede
+  * http://example.com/app/#/cars
 
-that, when parsed, will correspond to some sort of "route" structure
-whose names are arbitrarily linked to the endpoints' names:
+Given the association between a routable URL to a routePath thence to a
+Route, it is logical to expect that we will build a Route that looks, as
+a naive implementation, like:
 
     carsRoute: {
      route: '/cars'
     }
 
-which, in turn, will bear the responsibility of creating the necessary
-Model, Controller, View and instances required to support a given set of
-functionality.
+We also know that `Route`s are aggregated into a `Router`.  The only piece
+missing, therefore, is something that translates the routable URL and then
+loads up the applicate state associated with the routable URL's `Route`.
 
-With this general groundwork in place, we shall now consider the
-behavior of a user on a site given this common vocabulary.  Thence we
-shall undertake a series of exercises that will create a basic routable
-application.
+In this example, it turns out that the Router is both the collection of Routes,
+but also bears the responsibility of creating the necessary Model, Controller,
+View and instances required to support a given set of functionality in a Route.
+
+In the subsequent sections, therefore, this guide will demonstrate how to
+construct a Router, an abstraction that:
+
+* Defines a collection of `State`s, i.e. `Route`s
+* Puts the browser into those states based on the routable URL
+* Delegates model, controller, and view construction to its contained routes
+
+With this general groundwork in place, we shall now undertake a series of
+exercises that will create a basic routable application.
 
 <!--- }}}1 -->
 
 ## Practical Application
 
+<!-- {{{1 -->
+
+### Method
+
+<!-- {{{2 -->
+
+#### Text
+
+<!-- {{{3 -->
+
+This guide attempts to allow the reader to follow the incremental building-up
+of a router-driven application.  You should be able to follow along on your
+tablet on the train and, with some focus, follow along.  As such the code is
+*frequently* re-listed.
+
+<!-- }}}3 -->
+
+#### Hands-on Code
+
+<!-- {{{3 -->
+
+If you are in a situation where you have access to a computer, this guide also
+has reference to a [GitHub](http://github.com) project whose commits match each
+of these incremental steps.  As such, you can clone the repository, check out
+the commit under discussion, adjust the code, try things out, and then move to
+the next step.
+
+The code is housed in a minimal application framework built on Ruby and Sinatra
+called [Halbert](https://github.com/sgharms/halbert).  If the terms "git,"
+"Sinatra," and "Ruby" are all confusing to you, feel free to merely follow
+along with the text and / or copy-and-paste the code listings into your
+development environment.
+
+<!-- }}}3 -->
+
+<!-- }}}2 -->
+
 ### Step One: Minimum Non-Viable Router
 
 <!--- {{{1 -->
+
 This step:
 
 1.  Creates an Ember.Application
@@ -1317,13 +1381,29 @@ And we can remove the `goToShoes` trigger in the `cars` Route.
 
 ## Conclusion
 
-With this guide you should not have a feeel for how to construct an application
+With this guide you should not have a feel for how to construct an application
 using Ember.JS.  You have learned how to define a router, how to define a model
 class, and how each Ember application is conceived of as a finite series of
 states.  We move between states by allowing the URL to dictate the state to
 load, by handing an event on a trigger, or by direct console-based invocation
 of Em.Routable methods which effect changes in state.
 
+
+----
+
+## Footnotes
+
+<a id="location-manager"></a>
+
+1.  The default location manager, "HashLocation,"  signifies various routes by
+means of `/#/`.  To change this behavior, set the `location` property on the
+Router to **any** `Ember.Object` that implements the methods specified in the
+`Ember.Location` API.  For more information, consult the `Ember.Location`
+[API][E.L.API].
+
+[E.L.API]: https://github.com/emberjs/ember.js/blob/master/packages/ember-routing/lib/location/api.js "Ember.Location API Source Code"
+
+<!-- {{{1 -->
 
 [EmberSite]: http://emberjs.com/ "Ember.JS Homepage"
 [StateMachine]: http://en.wikipedia.org/wiki/Finite-state_machine "Wikipedia definition of a State Machine"
@@ -1332,5 +1412,6 @@ of Em.Routable methods which effect changes in state.
 [EmberRoute]: https://github.com/emberjs/ember.js/blob/master/packages/ember-routing/lib/route.js "Ember.Route Source"
 [OutletGuide]: http://emberjs.com/guides/outlets  "Ember Application Structure Guide"
 [StateManager]:  https://github.com/emberjs/ember.js/blob/master/packages/ember-states/lib/state_manager.js "Ember StateManager"
+<!-- }}}1 -->
 
 <!-- vim: set fdm=marker ft=markdown tw=79: -->
