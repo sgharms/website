@@ -153,26 +153,24 @@ exercises that will create a basic routable application.
 
 ## Practical Application
 
+### Instructional Method
+
 <!-- {{{1 -->
-
-### Method
-
-<!-- {{{2 -->
 
 #### Text
 
-<!-- {{{3 -->
+<!-- {{{2 -->
 
 This guide attempts to allow the reader to follow the incremental building-up
 of a router-driven application.  You should be able to follow along on your
 tablet on the train and, with some focus, follow along.  As such the code is
 *frequently* re-listed.
 
-<!-- }}}3 -->
+<!-- }}}2 -->
 
 #### Hands-on Code
 
-<!-- {{{3 -->
+<!-- {{{2 -->
 
 If you are in a situation where you have access to a computer, this guide also
 has references to a [GitHub](http://github.com) project,
@@ -190,9 +188,9 @@ called [Halbert](https://github.com/sgharms/halbert).  If the terms "git,"
 along with the text and / or copy-and-paste the code listings into your
 development environment.
 
-<!-- }}}3 -->
-
 <!-- }}}2 -->
+
+<!-- }}}1 -->
 
 ### Step One: Minimum Non-Viable Router
 
@@ -268,7 +266,8 @@ your application` _but also_ shows signs of improvement: we see the
 <img src="/images/routing-primer/no-app-controller-defined.png">
 
 An `Ember.Application` using the `Router` **must** define **both**
-`ApplicationController` and `ApplicationView`.  
+`ApplicationController` and `ApplicationView`.  Why this is so will be made
+clear multiple times throughout this guide.
 
 These definitions are simple:
 
@@ -298,7 +297,8 @@ exceptions" to a solid baseline.
 While a `Route` called `root` is the only thing **required** to boot up a
 `Router` based application, that `Route` should be a "meta-Route," a Route that
 holds Routes.  By convention the Route that `root` holds, that corresponds to
-the base state of the application, should be called `index.`
+the base state of the application, should be called `index.` **The root Route
+cannot be made routable.**  
 
 [_Diff View_](https://github.com/sgharms/Halbert/commit/290ff2c636b6dc4218301967b020f1e48e9cf221)
 
@@ -403,64 +403,137 @@ An initial load of this application looks like the following:
 
 <!--- }}}1 -->
 
-### Steps One Through Three In Review:  Required Components
+## Step Four:  Application Construction in Ember
 
 <!--- {{{1 -->
 
-#### Root "Route"
+At this point one _technically_ has a funcitoning Router-based application.  The next steps hinge less on the Router, and more on Ember's approach to application construction.  These approaches become manifest in the Router's syntax as more advanced applications are built.
+
+### Views
 
 <!--- {{{2 -->
-While the guidelines given in Step Two are sufficient to **create** a
-baseline routing application, this section provides the "why" an
-application must meet the requirements.
 
-By default, when the Router is instantiated it automatically moves to
-the state `root`.  This is the "default landing place" for the Router.
-`root` **is not a route** itself.  It is the box which contains the
-routes, but it is not a route.  It bears repeating:  **You cannot make
-this default landing place routable.**  As such if `root` is not present
-the Router should, and does, report an error.
+Views in Ember are responsible for:
 
-If an application has only one route, as does our example thus far, it
-should have a sub-Route, by convention, called `index` that answers to
-the navigable hash-bang url `/`; that is, the default URL to navigate to
-the application.
-
-This Route can either wire-up views or it can redirect to another Route.
+* Determining the structure of a section of the application's rendered HTML, e.g. "this view should be of class person-name"
+* Responding to delegated user events, e.g. "fade-in on mouseOver"
+ 
+All views have a rendering context.  Inside of a View's template file, usage of `{{property}}` is evaluated against that context.  It is **not** the case that the view holds the context.  
 
 <!--- }}}2 -->
 
-#### ApplicationView and ApplicationController
+### ApplicationView is Special
 
 <!--- {{{2 -->
-Ember is opinionated, and we believe that to be A Good Thing.
 
-Ember.Views should only be concerned with presentation and
-event-handling logic: e.g. recognizing a click event, hiding a widget on
-the screen, etc.  Logic outside of this scope should be handled on an
-instance of a controller which has a tight coupling to the view.
-
-We can see the tightness of this coupling by virtue of the naming convention.
-For views that will be wired up by the Router, when given a base name (e.g
-'BaseName'), there should be an `App.BaseNameView` and an
-`App.BaseNameController.` These router-wire-able types of views will be
-automatically instantiated by the call to `#initialize()` into instances
-corresponding to the convention such that `BaseNameView`'s instance is
-`App.baseNameView` and the controller, similarly, becomes
-`App.baseNameController`.
-
-As we seek to "wire up" these view instances in the router, they will need
-a primordial "thing" on which to hang.  They will need a special view that
-is guaranteed to exist.  These instances need a primordial `Em.View` on which
-to "hang."  By Ember convention that primoridal, base view is an instance of
-`App.ApplicationView`  called `App.applicationView`.  Its associated controller
-is, as the conventions should help you surmise, `App.applicationController`.
-It is for this reason that Ember threw an error in Step II when we defined
-a router-based application *without* these two critical classes.
+This view is the root view of all other views.  All other views will be
+injected into it via a template concept called an `{{outlet}}` which will be
+discussed later.  This is why, as demonstrated earlier, Ember considers it a
+raise-worthy problem when it does not find the `ApplicationView` (or its partner,
+`ApplicationController`).
 
 <!--- }}}2 -->
 
-<!--- }}}1 -->
+### The Default Context For a View Is Its Controller
+
+<!--- {{{2 -->
+
+Given the preceeding discussion, it stands to reason that the default context
+for ApplicationView would be ApplicationController.  As such, a value set in
+ApplicationController, when referenced by handlebars inside of the
+ApplicationView's template, should render to the screen.
+
+In the following code listing the view renders content from its context _as
+well as_ uses the context to determine whether a class should be applied to the
+view.  
+
+Make the following adjustments to your code.
+
+[_Diff View_](https://github.com/sgharms/Halbert/commit/333059d11fda775794242b93091d34ed5ae461b5)
+
+<!--- {{{3 -->
+
+```javascript
+window.App = Ember.Application.create({
+  ApplicationView: Ember.View.extend({
+    templateName:  'application',
+    classNames: ['application-view']
+  }),
+  ApplicationController: Ember.Controller.extend({
+    slogan: 'A framework for creating ambitious web applications',
+    isSlogan: true
+  }),
+  ready: function(){
+    console.log("Created App namespace");
+  },
+  Router: Ember.Router.extend({
+    enableLogging:  true,
+    root:  Ember.Route.extend({
+      index:  Ember.Route.extend({
+        route:  '/'
+      })
+    })
+  })
+});
+
+App.initialize();
+```
+<!--- }}}3 -->
+
+<!--- {{{3 -->
+
+```handlebars
+<script type="text/x-handlebars" data-template-name="application">
+  <h1>Hi Ember</h1>
+  <p {{bindAttr class="isSlogan"}} >Ember is: {{slogan}}</p>
+</script>
+```
+
+<!--- }}}3 -->
+
+The result is the following:
+
+<figure>
+  <img src="/images/routing-primer/contexts-and-content.png">
+</figure>
+
+Information is shared between the ApplicationView and the ApplicationController
+The View stays focused on presentation while the Controller stays focused on
+domain logic.  By setting `classNames` on the View we affect the CSS classes applied to the `Ember.View`.  By using `bindAttr` we tell the template to apply the class `is-slogan` if the context's evaluation of `isSlogan` returns `true`.
+
+<!--- }}}2 -->
+
+### Views Are Tighty Coupled To Their Controllers
+
+<!--- {{{2 -->
+
+Given the preceeding discussion, an opinion of Ember's designers, that is
+enforced by the router is that for a given `BaseName` (e.g. "Application,"
+"CustomerEntry," "My Items") there should be a BaseNameView and a
+BaseNameController.  The base name "Application" is no different.  In this
+respect.  Remember: Views hold UI behavior, their partner controllers hold
+information about UI.
+
+<!--- }}}2 -->
+
+### Router-Controlled Views and their Controllers Are Instantiated in Ember.Application#initialize()
+
+<!--- {{{2 -->
+
+In the code listings thus far, a call to `App.initialize()` has always been the
+last line of code.  The function of this call is multiple:
+
+1.  It runs `.create()` on the `Router` instance and saves it as `App.router`.
+1.  It iterates through the controller and view namespaces and, for each class found, it executes .create() on the class and sets that instance as a property on `App.router`
+
+Again, thanks to the requirement that `ApplicationController` and
+`ApplicationView` and the #initialize() method, developers are assured that
+there is a primoridal view managed by a sensibly-named controller, onto which
+other views can be plugged in.  Specifically the ApplicationView and
+ApplicationController, post-initialize, are set to `App.router.applicationView`
+and `App.router.applicationController`.  
+
+<!--- }}}2 -->
 
 <!--- }}}1 -->
 
