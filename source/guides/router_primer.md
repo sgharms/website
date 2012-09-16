@@ -175,10 +175,14 @@ tablet on the train and, with some focus, follow along.  As such the code is
 <!-- {{{3 -->
 
 If you are in a situation where you have access to a computer, this guide also
-has reference to a [GitHub](http://github.com) project whose commits match each
-of these incremental steps.  As such, you can clone the repository, check out
-the commit under discussion, adjust the code, try things out, and then move to
-the next step.
+has references to a [GitHub](http://github.com) project,
+[Ember-Router-Application-Guide-Code][ERGC], whose commits match each of these
+incremental steps.  As such, you can clone the repository, check out the commit
+under discussion, adjust the code, try things out, and then move to the next
+step.  Simply clone the project, follow its `README.md` you will have, in the
+`workspace` subdirectory, the code that I demonstrate in the text listings.
+
+In each of the text listings I will include GitHub URLs that show the diffs in the code so that each step is easily digested.
 
 The code is housed in a minimal application framework built on Ruby and Sinatra
 called [Halbert](https://github.com/sgharms/halbert).  If the terms "git,"
@@ -194,11 +198,7 @@ development environment.
 
 <!--- {{{1 -->
 
-This step:
-
-1.  Creates an Ember.Application
-1.  Gives preliminary debugging output
-1.  Produces one critical error
+[_Diff View_][StepOne]
 
 ```javascript
 window.App = Ember.Application.create({
@@ -213,21 +213,30 @@ window.App = Ember.Application.create({
 App.initialize();
 ```
 
-The result should look like the following when we run this application with our
-console open:
+This step:
+
+1.  **Establishes an Ember application**:  `window.App = Ember.Application.create` creates an Ember.Application called `App`.  Creating this App object:
+  1.  provides a single location for all objects associated with this application so as to [avoid polluting the global namespace](https://www.google.com/search?q=don't+pollute+the+global+namespace)
+  1.  creates a single listener for each user event (e.g. 'click') and [controls event delegation](https://www.google.com/search?q=event+delegation).
+1.  **Provides some diagnostic logging**:  Taking from the jQuery playbook, when the document is ready, the logger message fires
+1.  **Declares our `Router` class**:  A property called `Router` is declared on `App`.  It is an instance of `Ember.Router` and will be the main area of changes in this guide
+
+Refresh your browser that's viewing this code and you will receive the following error in your console:
 
 <img src="/images/routing-primer/app-without-root-route.png">
 
 An error appears:   `Uncaught Error: assertion failed: Failed to transition to
 initial state "root" `.
 
-The Router class of of an Ember application **must** contain an Ember.State
-called `root`.  As a legacy of Ember's history and inheritance chain, `State` is
-a synonym for `Route` (see discussion above).  As such, the error message can be
-read as saying that the application could not find an `Ember.Route` called
+As a legacy of Ember's history and inheritance chain, `State` is a synonym for
+`Route` (see discussion above).  As such, the error message can be read as
+saying that the application could not find an `Ember.Route` called `root`.  The
+Router class of of an Ember application **must** contain an Ember.State called
 `root`.  Let's add it.
 
 The amended code will look like the following:
+
+[_Diff View_][StepOneOne]
 
 ```javascript
 window.App = Ember.Application.create({
@@ -243,7 +252,7 @@ window.App = Ember.Application.create({
 App.initialize();
 ```
 
-Let's give it a reload and see what happens....
+Refresh the browser.
 
 <!--- }}}1 -->
 
@@ -251,16 +260,26 @@ Let's give it a reload and see what happens....
 
 <!--- {{{1 -->
 
-Running the previous code *again* produces an error:  `Uncaught Error: assertion
-failed: ApplicationView and ApplicationController must be defined on
-your application`.
+Running the previous code *again* produces an error:  `Uncaught Error:
+assertion failed: ApplicationView and ApplicationController must be defined on
+your application` _but also_ shows signs of improvement: we see the
+`console.log` message.
 
 <img src="/images/routing-primer/no-app-controller-defined.png">
 
-An Ember application using the router **must** define **both**
-`ApplicationController` and `ApplicationView`.  In conjunction with a `root`
-route that has a routable child, these are the only requirements for an
-Ember application that makes use of the Router.
+An `Ember.Application` using the `Router` **must** define **both**
+`ApplicationController` and `ApplicationView`.  
+
+These definitions are simple:
+
+[_Diff View_][StepThree]
+
+```javascript
+ApplicationView: Ember.View.extend(),
+ApplicationController: Ember.Controller.extend(),
+```
+
+Place these two declarations on the `App` object and refresh.
 
 <!--- }}}1 -->
 
@@ -268,11 +287,23 @@ Ember application that makes use of the Router.
 
 <!--- {{{1 -->
 
-Let's address the error of the previous section and, in to doing, create the
-standard, minimal, Ember application:
+Ember no longer complains about missing critical data, **but** there are some
+important modifications that should be made to move from "doesn't throw
+exceptions" to a solid baseline.
 
+#### Add an 'index' property
 
 <!--- {{{2 -->
+
+While a `Route` called `root` is the only thing **required** to boot up a
+`Router` based application, that `Route` should be a "meta-Route," a Route that
+holds Routes.  By convention the Route that `root` holds, that corresponds to
+the base state of the application, should be called `index.`
+
+[_Diff View_](https://github.com/sgharms/Halbert/commit/290ff2c636b6dc4218301967b020f1e48e9cf221)
+
+<!--- {{{3 -->
+
 ```javascript
 window.App = Ember.Application.create({
 
@@ -289,53 +320,33 @@ window.App = Ember.Application.create({
 });
 App.initialize();
 ```
+
+<!--- }}}3 -->
 
 <!--- }}}2 -->
 
-<!--- {{{2 -->
-This will load cleanly, according to the console.
-
-Lamentably this is a rather visually dull site because no templates chocked full
-of beautiful HTML and styled by beautiful CSS have been wired up (yet).  While
-we'll remedy that in a hurry but there are other ways of printing diagnostic
-data.  It behooves the Ember developer to know some of these techniques for
-debugging and Router "sketching" purposes.
-
-
-First, we can add `console.log` actions to the `enter` or `exit` properties of an
-`Ember.Route`.
-
-Another tool for providing output that confirms that our implementation of the
-router is correct is to enable logging of the router's decision process.  To do
-so we set the `enableLogging` property to `true` within the Router.  When the
-browser's debug console is open, the router will print helpful error messages
-beginning with `STATEMANAGER`.
-
-Lastly, as a point of formatting, when one to examines the Ember source one
-sees *liberal* use of vertical whitespace.  Just as vertical whitespace helps
-separate logical "paragraphs" of operations in code, so too is it appropriate
-to use vertical whitespace to create logical groupings of controllers and
-views.  Both of these, per the developer's &aelig;sthetic sensibility, might
-might be set off from simple properties.  Here's a minimum viable application
-with diagnostic data enabled.
+#### Add a template to the ApplicationView
 
 <!--- {{{2 -->
+
+[_Diff View_](https://github.com/sgharms/Halbert/commit/935bb45542da2c2143d5e45b5eec10a7c3d3b361)
+
+So that we start to see some visual feedback besides `console.log` messages, a
+template property should be added to the `ApplicationView` class.
+
+<!--- {{{3 -->
+
 ```javascript
 window.App = Ember.Application.create({
 
-    ApplicationView: Ember.View.extend(),
+    ApplicationView: Ember.View.extend({
+      templateName:  'application'
+    }),
     ApplicationController: Ember.Controller.extend(),
 
     Router: Ember.Router.extend({
-      enableLogging:  true,
       root:  Ember.Route.extend({
-        enter:  function(){
-          console.log("entered root");
-        },
         index:  Ember.Route.extend({
-          enter:  function(){
-            console.log("entered index");
-          },
           route:  '/'
         })
       })
@@ -343,6 +354,44 @@ window.App = Ember.Application.create({
 });
 App.initialize();
 ```
+
+<!--- }}}3 -->
+
+This requires the addition of a template called 'application':
+
+<!--- {{{3 -->
+
+```handlebars
+<script type="text/x-handlebars" data-template-name="application">
+  <h1>Hi Ember</h1>
+</script>
+```
+
+<!--- }}}3 -->
+
+<!--- }}}2 -->
+
+#### Logging and Debugging
+
+<!--- {{{2 -->
+
+Every `Ember.Route` fires an `enter` and `exit` callback.  Here is a suitable
+place to insert logging and debugging data as has already appeared in this
+application.
+
+Setting the `enableLogging` property to `true` within the Router also helpfully
+display's the Router's decision-making process.  When the browser's debug
+console is open, the router will print helpful error messages beginning with
+`STATEMANAGER`.
+
+[_Diff View_]( https://github.com/sgharms/Halbert/commit/431b22657496f9c2775281e023ff864c3cf2ea94)
+
+Lastly, as a point of formatting, Ember makes *liberal* use of vertical whitespace.  Just as vertical whitespace helps
+separate logical "paragraphs" of operations in code, so too is it appropriate
+to use vertical whitespace to create logical groupings of controllers and
+views.  
+
+<!-- }}}2 -->
 
 An initial load of this application looks like the following:
 
@@ -1412,6 +1461,10 @@ Router to **any** `Ember.Object` that implements the methods specified in the
 [EmberRoute]: https://github.com/emberjs/ember.js/blob/master/packages/ember-routing/lib/route.js "Ember.Route Source"
 [OutletGuide]: http://emberjs.com/guides/outlets  "Ember Application Structure Guide"
 [StateManager]:  https://github.com/emberjs/ember.js/blob/master/packages/ember-states/lib/state_manager.js "Ember StateManager"
+[ERGC]: https://github.com/sgharms/Ember-Router-Application-Guide-Code
+[StepOne]: https://github.com/sgharms/Halbert/commit/c7f2f79f8a5b4f946ab6dc40850c0b7810ee5ef8
+[StepOneOne]: https://github.com/sgharms/Halbert/commit/369f7ce14c72dd9f552e890642ea63b742dade72
+[StepThree]: https://github.com/sgharms/Halbert/commit/0dfbb4b1fadb29e95967b98be9ca13778843fa3d
 <!-- }}}1 -->
 
 <!-- vim: set fdm=marker ft=markdown tw=79: -->
