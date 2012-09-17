@@ -1,5 +1,6 @@
 # Understanding the Ember.js Router: A Primer
 
+
 ## Introduction
 
 <!--- {{{1 -->
@@ -56,7 +57,7 @@ A container that holds an arbitrary number of unique states.
 
 ### Router
 
-While Ember supports having many `StateManagers`, that address a wide variety
+While Ember supports having many `StateManagers` that address a wide variety
 of purposes (handling what's in a status console, toggling lightbox effects,
 etc.), a StateManager dedicated to bringing about certain application states is
 a Router.  Fittingly, in the Ember source, a `Router` has an is a sublcass of
@@ -64,7 +65,7 @@ a Router.  Fittingly, in the Ember source, a `Router` has an is a sublcass of
 
 ### Route
 
-Just as a Router is a special case of a `StateManager`, a `Router`'s
+Just as a `Router` is a special case of a `StateManager`, a `Router`'s
 consitituent `State`s are given the special designation of `Route`.
 
 ### RoutePath 
@@ -85,7 +86,7 @@ default, this looks like `http://example.com/#/posts`,
 `http://localhost:4567/#/cars`, `http://localhost:4567/#/post/show/1`.  
 
 The relevant part of the url is the part that is featured after the `#/`.  In
-the descriptions above, the Routable URLs will trigger the Router to change
+the descriptions above, the Routable URLs will trigger the `Router` to change
 state to either `posts`, `cars`, or `post.show`.  If the use of this
 "hash-slash" delimiter is not desirable, it can easily be
 changed<sup>[1](#location-manager)</sup>.
@@ -107,7 +108,7 @@ matching URL would be `#/post/show/1`.
 
 Given that there is a correspondence between navigational endpoints (URLs),
 their routePaths, and those routes' "states," it is obvious that an Ember
-application that uses the Router is a [State Machine][StateMachine] that uses
+application that uses the `Router` is a [State Machine][StateMachine] that uses
 routePaths and / or URLs to change into the states.
 
 ## Summation of Definitions' Interplay and Looking Ahead
@@ -115,7 +116,7 @@ routePaths and / or URLs to change into the states.
 <!--- {{{1 -->
 
 Given the preceeding definitions, we should be able to imagine an Ember
-application that uses the Router.  While the exact how-to will come next, if we
+application that uses the `Router`.  While the exact how-to will come next, if we
 wanted to talk about shoes and cars, we would imagine an application that does
 something when handed URLs like:
 
@@ -133,11 +134,15 @@ a naive implementation, like:
 
 We also know that `Route`s are aggregated into a `Router`.  The only piece
 missing, therefore, is something that translates the routable URL and then
-loads up the applicate state associated with the routable URL's `Route`.
+loads up the applicate state associated with the routable URL's `Route`.  This
+process of turning a string representation of application state is known as
+"deserializing."  The reverse, representing the state of the application as a
+string, which happens to be a URL that can conveniently be shared or
+bookmarked, is known as "serializing."  As has been said elsewhere, "URLs are just a useful side effect of state change([_Source_][Trek]"
 
-In this example, it turns out that the Router is both the collection of Routes,
-but also bears the responsibility of creating the necessary Model, Controller,
-View and instances required to support a given set of functionality in a Route.
+The `Router` is both the collection of `Route`s, but also bears the
+responsibility of creating the necessary Model, Controller, View and instances
+required to support a given set of functionality in a Route.
 
 In the subsequent sections, therefore, this guide will demonstrate how to
 construct a Router, an abstraction that:
@@ -214,8 +219,8 @@ App.initialize();
 This step:
 
 1.  **Establishes an Ember application**:  `window.App = Ember.Application.create` creates an Ember.Application called `App`.  Creating this App object:
-  1.  provides a single location for all objects associated with this application so as to [avoid polluting the global namespace](https://www.google.com/search?q=don't+pollute+the+global+namespace)
-  1.  creates a single listener for each user event (e.g. 'click') and [controls event delegation](https://www.google.com/search?q=event+delegation).
+  1.  Provides a single location for all objects associated with this application so as to [avoid polluting the global namespace](https://www.google.com/search?q=don't+pollute+the+global+namespace) ([_Source_][Trek])
+  1.  Creates a single listener for each user event (e.g. 'click') and [controls event delegation](https://www.google.com/search?q=event+delegation) ([_Source_][Trek])
 1.  **Provides some diagnostic logging**:  Taking from the jQuery playbook, when the document is ready, the logger message fires
 1.  **Declares our `Router` class**:  A property called `Router` is declared on `App`.  It is an instance of `Ember.Router` and will be the main area of changes in this guide
 
@@ -525,6 +530,7 @@ last line of code.  The function of this call is multiple:
 
 1.  It runs `.create()` on the `Router` instance and saves it as `App.router`.
 1.  It iterates through the controller and view namespaces and, for each class found, it executes .create() on the class and sets that instance as a property on `App.router`
+1. Each `create`d view is given a `controller` property that corresponds to its controller (thus setting up the context to be helpful by default so that templates look in the right place for data).
 
 Again, thanks to the requirement that `ApplicationController` and
 `ApplicationView` and the #initialize() method, developers are assured that
@@ -537,119 +543,173 @@ and `App.router.applicationController`.
 
 <!--- }}}1 -->
 
-### Step Four:  A New Hope
+### Step Four:  Add More Routes
 
 <!--- {{{1 -->
 
-Let us now create a new Router-implementing Ember application.  We need
-something slightly less trivial than what has been demonstrated before so that
-we may discern the state-transitioning features afforded by the Router.
+Let us now expand on the application we've built so far.  We know how to build
+a minimum viable application, how to define routes, and how to implement
+debugging-grade instrumentation.  In the next listing, the `root.index`
+routePath will be joined by two other routes: `root.shoes` and `root.cars`.
+
+[_Diff View_](https://github.com/sgharms/Halbert/commit/e4b2b9922193d9b6bd821f0dba253395c0db9485)
 
 <!--- {{{2 -->
+
 ```javascript
 window.App = Ember.Application.create({
-    ApplicationView: Ember.View.extend(),
-    ApplicationController: Ember.Controller.extend(),
-
-    Router: Ember.Router.extend({
-      enableLogging:  true,
-
-      root:  Ember.Route.extend({
+  ApplicationView: Ember.View.extend({
+    templateName:  'application',
+    classNames: ['application-view']
+  }),
+  ApplicationController: Ember.Controller.extend({
+    slogan: 'A framework for creating ambitious web applications',
+    isSlogan: true
+  }),
+  ready: function(){
+    console.log("Created App namespace");
+  },
+  Router: Ember.Router.extend({
+    enableLogging:  true,
+    root:  Ember.Route.extend({
+      index:  Ember.Route.extend({
+        route:  '/'
+      }),
+      shoes:  Ember.Route.extend({
         enter: function ( router ){
-          console.log("The root state was entered.");
+          console.log("The shoes sub-state was entered.");
         },
-        index:  Ember.Route.extend({
-          enter: function ( router ){
-            console.log("The index sub-state was entered.");
-          },
-          route: '/'
-        }),
-        shoes:  Ember.Route.extend({
-          enter: function ( router ){
-            console.log("The shoes sub-state was entered.");
-          },
-          route: '/shoes'
-        }),
-        cars:  Ember.Route.extend({
-          enter: function ( router ){
-            console.log("The cars sub-state was entered.");
-          },
-          route: '/cars'
-        })
+      }),
+      cars:  Ember.Route.extend({
+        enter: function ( router ){
+          console.log("The cars sub-state was entered.");
+        },
       })
     })
+  })
 });
+
 App.initialize();
 ```
-
-This application follows the format of the previous application but with the
-addition that the routes now each have an `enter` callback which will be called
-when that state is entered.  There is also an `exit` callback.
-
 <!--- }}}2 -->
+
+It's worth noting here that the initial routes were added **within** the
+declaration of the root route.   **Remember:**  all routes must be held within
+the `root` Route.
+
+With a refresh of this page you should see the same layout, but now there are
+views wherewith to experiment.   The first means for moving state is by direct
+programmatic invocation from the console.
+
+<!--- }}}1 -->
 
 ### Step Five:  Programmatically Affecting State Change
 
 <!--- {{{1 -->
 
 Routes can be transitioned into programmatically by invoking
-`Ember.Router#transitionTo('stateName')`.
+`Ember.Router#transitionTo('stateName')`.  The `Router` instance in the
+currently running application can be accessed by entering: `App.get('router')`
+in the console.  It is also helpful to issue
+`App.get('router.currentState.name')` when you want to find out what the
+current, active `Route` is.
 
-In the web console of a browser running the code provided in the previous
-section, you can try out the first method by invoking the `transitionTo` method
-on the `App.Router` class's instance, `App.router` like so:
-`App.router.transitionTo('root.cars')`.  Two important things happen:
+Per the code listing, Routes named `cars` and `shoes` were added.  To change to
+the `cars` route, issue `App.get('router').transitionTo('cars')`.  Notice that
+The [State Manager][StateManager] logging output states that the `cars
+sub-state was entered`.  The console provides further tools wherewith to
+ascertain the state of the router as shown in the image.
 
-1. The [State Manager][StateManager] logging output states that the `cars
-sub-state was entered`
-1. The URL slug becomes affixed with `#/cars`
+<img src="/images/routing-primer/change-states-noroute-defined.png">
 
-The first point is the expected result under the principle of least surprise,
-we changed the state.  The second result is that the slug updated the URL to
-express a URL path that uniquely maps to a state in the state machine.
+The listing also shows that something important **did not** happen, the URL did
+not change in a way that is relevant to the states.  Thanks to the
+`window.location.href` it's clear to see that the URL slug did not change.
+This did not happen because the `cars` and `shoes` `Route`s both **lack** the
+`route` property.  Making the tiny changes in the next section will fix this
+problem.
 
-We can change to the other state with: `App.router.transitionTo('root.shoes')`.
-Again, as expected, we enter that Route state and see a change in the URL slug to
-`#/shoes`.
+<!-- }}}1 -->
+
+### Step Six:  Adding the route property
+
+<!-- {{{1 -->
+
+[_Diff View_](https://github.com/sgharms/Halbert/commit/2b84962891eff4dba4a4f2e1afbe99840fdbb17b)
+
+This is a simple code change:
+
+<!-- {{{2 -->
+
+```javascript
+window.App = Ember.Application.create({
+  ApplicationView: Ember.View.extend({
+    templateName:  'application',
+    classNames: ['application-view']
+  }),
+  ApplicationController: Ember.Controller.extend({
+    slogan: 'A framework for creating ambitious web applications',
+    isSlogan: true
+  }),
+  ready: function(){
+    console.log("Created App namespace");
+  },
+  Router: Ember.Router.extend({
+    enableLogging:  true,
+    root:  Ember.Route.extend({
+      index:  Ember.Route.extend({
+        route:  '/'
+      }),
+      shoes:  Ember.Route.extend({
+        route: '/shoes',
+        enter: function ( router ){
+          console.log("The shoes sub-state was entered.");
+        },
+      }),
+      cars:  Ember.Route.extend({
+        route: '/cars',
+        enter: function ( router ){
+          console.log("The cars sub-state was entered.");
+        },
+      })
+    })
+  })
+});
+
+App.initialize();
+```
+<!-- }}}2 -->
+
+Now, when the `transitionTo` method is used, the application's state is
+"_serialized_" into the URL slug.  Similarly, if we navigate to
+`http://server/#/cars` the cars state is "_deserialized_."  While these URLs
+map neatly to a defined `Route` name, URLs can feature dynamic segments or
+nested segments as well.  The `Route` can define how to handle the serialize /
+deserialize processes by defining `serialize()` and `deserialize()` methods on
+the `Route`.  Advanced (de)serialization will be covered later in this guide.
+
+<!-- }}}1 -->
+
+We can likewise change to the other state with:
+`App.router.transitionTo('root.shoes')`.  As expected, we enter that Route
+state and see a change in the URL slug to `#/shoes`.
 
 It is worth noting that when transferring between sibling states (`cars` to
 `shoes`) the parent state was *not* entered.  This is confirmed both my the
 state manager's debugging  output as well as by the non-execution of the
-`root.index`'s `enter()` callback.
-
-Recall that in the introduction we said that each state was uniquely identified
-by a routePath (e.g. `root.cars`) that could be uniquely bonded to a URL.  By
-changing a state by means of `transitionTo` and a `routePath` we affect a
-change in the URL.  Contrawise one should expect that a change in the URL
-navigated to should afect a change in the state loaded &#x2014; *and that is
-exactly what happens!*
-
-That is the purest essence of the Ember.Router:  an
-[Ember.StateManager][StateManager] whose states are uniquely addressable via
-`routePath`s **or** URLs.
+`root.index`'s `enter()` callback.  The following image demonstrates the
+flexibility the router affords users.
 
 <figure>
   <img src="/images/routing-primer/move-between-routes-transitionto-urlslug.png">
 </figure>
 
-The exact methods by which the Router knows how to translate a URL slug into a
-series of objects required for a state is controlled my a method on Route
-called `deserialize`.  The means by which a state expresses its required
-components based on the contents of the url is controlled by a method called
-`serialize.`  We'll see more about the control and customization of objects
-based on route states later on in this guide, but what's important to take away
-is that Ember provides means for easily controlling what needs to happen based
-on the slug and for fabricating a string (the slug) which were it to be passed
-to the router via URL navigation or bookmark would allow it to pull up the
-right data objects needed to fulfill the expectations of the Route.
-
-Let's set that concern aside for a moment and look at how to move our
-interaction with the app from merely logging diagnostic data based on Route /
-State change to something more visually stimulating.
+With Routes with URLs in place, we can now work to make the views behave as
+side-effects of the application state.
 
 <!--- }}}1 -->
 
-### Step Six:  Wiring Up Views in Routes: The {{outlet}}
+### Step Seven:  Wiring Up Views in Routes: The {{outlet}}
 
 <!--- {{{1 -->
 
@@ -664,267 +724,293 @@ data source might contain different content when loaded (e.g. "logged-in
 navigation" or "admin navigation");
 
 The place where this appropriate-to-the-State View "plugs in" is an "`outlet`."
-While "outlet" has many subtle meanings in English, in Ember case it means the
-place where Views get plugged in.
+While "outlet" has many subtle meanings in English, in Ember case it means "the
+place where Views get plugged in."
 
 We denote an outlet by putting the Em.Handlebars helper `{{outlet}}` inside of
 our Views' template code.  A template can have multiple outlets which are
-separated by name (e.g. `{{outlet topNav }}` and `{{outlet leftNav}}`).  In many
-templates, however, there will be only one `outlet`.
+differentiated by name (e.g. `{{outlet topNav }}` and `{{outlet leftNav}}`).
+In many templates, however, there will be only one `{{outlet}}`.
 
-For didactic purposes this guide will **not** be putting outlet declarations
-inside of another file.  Tutorials more generally focused on Ember's basic
-use cover the use of how a `templateName` property in a View can be used
-to refer to a `<script>`-based Handlebars template.  Since the views in this
-document are contrived, and to make for easier phone / tablet reading, the
-template code will be compiled *in situ* in the Views.
+In the following listing we add templates for the newest routes.  For each
+Ember requires _basename_View, _basename_Controller, and a template for each
+view.  This is a technique that has been demonstrated previously in this guide.
+What is new will be the _linking_ of these new views into the extant
+`ApplicationView`'s `{{outlet}}`.  Discussion of the "linking" method,
+`connectOutlets` occurs after the code listings.
 
-The following listing creates a view at the top level, the requisite
-`ApplicationView`, and gives it a simple template with a single `outlet`
-statement.
+This is one of the most important steps in the guide.  While simple, it is
+important and the diff view is very helpful.  
+
+[_Diff
+View_](https://github.com/sgharms/Halbert/commit/193c431005107714fbda96ee453f9030364e9225)
 
 <!--- {{{2 -->
 ```javascript
 window.App = Ember.Application.create({
-    ApplicationView: Ember.View.extend({
-      template:  Ember.Handlebars.compile("<p>App.View:</p><p>{{outlet}}</p>"),
-    }),
-    ApplicationController: Ember.Controller.extend(),
+  ApplicationView: Ember.View.extend({
+    templateName:  'application',
+    classNames: ['application-view']
+  }),
+  ApplicationController: Ember.Controller.extend({
+    slogan: 'A framework for creating ambitious web applications',
+    isSlogan: true
+  }),
 
-    Router: Ember.Router.extend({
-      enableLogging:  true,
+  CarsView:  Em.View.extend({
+    templateName:  'cars'
+  }),
+  CarsController:  Em.ArrayController.extend(),
 
-      root:  Ember.Route.extend({
+
+  ready: function(){
+    console.log("Created App namespace");
+  },
+  Router: Ember.Router.extend({
+    enableLogging:  true,
+    root:  Ember.Route.extend({
+      index:  Ember.Route.extend({
+        route:  '/'
+      }),
+      shoes:  Ember.Route.extend({
+        route: '/shoes',
         enter: function ( router ){
-          console.log("The root state was entered.");
+          console.log("The shoes sub-state was entered.");
         },
-        index:  Ember.Route.extend({
-          enter: function ( router ){
-            console.log("The index sub-state was entered.");
-          },
-          route: '/'
-        }),
-        shoes:  Ember.Route.extend({
-          enter: function ( router ){
-            console.log("The shoes sub-state was entered.");
-          },
-          route: '/shoes'
-        }),
-        cars:  Ember.Route.extend({
-          enter: function ( router ){
-            console.log("The cars sub-state was entered.");
-          },
-          route: '/cars'
-        })
+      }),
+      cars:  Ember.Route.extend({
+        route: '/cars',
+        enter: function ( router ){
+          console.log("The cars sub-state was entered.");
+        },
+        connectOutlets:  function(router, context){
+          router.get('applicationController').connectOutlet('cars');
+        }
       })
     })
+  })
 });
+
 App.initialize();
+```
+<!--- }}}2 -->
+
+And the templates:
+
+<!--- {{{2 -->
+```handlebars
+<script type="text/x-handlebars" data-template-name="application">
+  <h1>Hi Ember</h1>
+  <p {{bindAttr class="isSlogan"}} >Ember is: {{slogan}}</p>
+  <hr/>
+
+  {{outlet}}
+</script>
+
+<script type="text/x-handlebars" data-template-name="cars">
+  <h1>Cars</h1>
+  <p>Here in my car / I feel safest of all</p>
+</script>
 ```
 
 <!--- }}}2 -->
 
-When this application is loaded, the in-line template
-(`ApplicationView.template`) is rendered to the screen.  While the `template`'s
-Handlebars code presented the opportunity to connect something to its
-`{{outlet}}` "hook,"  we didn't do that.  Unsurprisingly, no view  was
-rendered.
+The application should look like this:
 
-`Em.Route`s afford a way to connect outlets programmatically.  One does so in a
-method called, fittingly, `connectOutlets`.  This method is provided as a
-mixed-in method from the Routable mixin.  While not strictly knowlegede at this
-juncture, it should remind the reader that the Router is a `StateManager` &plus;
-`Routable`.
+<img src="/images/routing-primer/initial-view-wireup.png">
 
-Let's suppose that in the `cars` state one wants to wire up a view into
-`ApplicationView`'s `outlet` that displays something `car`-related.
+The main change in this commit is the addition of the `{{outlet}}` in
+ApplicationView and the addition of `connectOutlets` in the `cars` route.
+Adding `{{outlet}}` to the template tells Ember: "This is a point that I want
+to insert a view."  
+
+Recall that `outlets` _can_ be named but, frequently, they are not.  When views
+are extremely well decomposed, it is likely that one will attach a view A to
+ApplicationView, some sub-view to A called "B," some sub views "B-prime" and
+"B-double-prime to B," etc.
+
+It is into the `outlet` defined in the template that we wish to "connect" a
+view appropriate for the `cars` route.  One does so in a method called,
+fittingly, `connectOutlets`.  This method is provided as a mixed-in method from
+the Routable mixin.  While not heretofore explicitly stated, in terms of class
+structure, the Router is a `StateManager` &plus; `Routable`.
 
 Let's first look at the signature of `connectOutlets`:
 
-    connectOutlets:  function(router){...}
+    connectOutlets:  function(router, context){...}
 
-`connectOutlets` is passed one argument by default: the router itself &endash;
-the selfsame router in which the method is defined!  While this may seem unusual
-at first glance, merely accepting this convention does not impair effective use
-of the router. 
+`connectOutlets` is always passed one argument by default: the router itself
+&endash; the selfsame router in which the method is defined!  When inside
+`connectOutlets`, if one neds to access other controllers, one should use the
+`router.get('someController')` pattern.  Ember lazily loads many of its
+components during its bootstrap process.  While
+`App.get('router.fooController')` and `router.get('fooController')` point to
+the same thing eventually, the latter is to be preferred within the router.
 
-This parameter should be used as a means for accessing the controllers and
-views that were automatically instantiated by the router during the
-Em.Application#initialize() call.  While `App.router.myController` is the same
-thing as `router.get('myController')`, the former makes assumptions about the
-namespace of the application and should be avoided.  By using the `router`
-parameter, developers ensure that they're not peeking into the mechanics of the
-Ember.Application internal machinery.
+The `context` parameter contains any data `return`ed from the `deserialize`
+method.  During a deserialization process the resultant data structure may need
+to be passed (and displayed) by one of the views connected in connectOutlets.
+This parameter is a placeholder for that data.  While not a concern in the
+current iteration of the app, it will be demonstrated later.
 
 Let's flesh out our connectOutlets method some more:
 
-    connectOutlets:  function(router){
-        router.get('applicationController').connectOutlet('shoes');
+    connectOutlets:  function(router, context){
+        router.get('applicationController').connectOutlet('cars');
     }
 
-Recall earlier that we noted that a given view might have multiple outlets?
-That's why the name of this method is `connectOutlet`**s**.   Within this
-method, one will invoke (0:many) calls to `connectOutlet` on a controller that
-is bonded (by naming convention) to a view.  One can read this line of code as:
-
 > "Router, find me the instance of your class App.ApplicationController called
-> App.applicationController which, by convention has an instance of the view
+> App.applicationController which, by convention is associated with the view
 > App.ApplicationView called App.applicationView whose template declaration
-> defines an outlet.  I wish to take an instance of App.ShoesView and inject its
+> defines an outlet.  I wish to take an instance of App.CarsView and inject its
 > template data into the outlet."
 
-`connectOutlet` has very flexible arguments invocations accepting either: 
+The amount of work done for so little typing is quite staggering!  Clearly some
+convention-over-configuration inference is being made during this invocation.
+In its single-argument invocation uses this single string to derive:
 
-* a single argument, a string (common) which Ember will apply some conventions to to derive:
   * A view source
   * A controller
   * Ember will assume the view with the outlet will have only one `{{outlet}}` call 
   * Ember will assume the view you're injecting will have the data it needs in its controller's `content` property
-* three arguments defining:
+
+Another common invocation is to pass three arguments defining:
+
   * a named outlet: if both `{{outlet alpha}}` and `{{outlet beta}}` are
 present, a string `'beta'` would tell Ember you want to inject onto the `beta`
-outlet * a name whence is derived a viewSource and controller
+outlet 
+  * a name whence is derived a viewSource and controller
   * a data object that will be assigned to the controller's `content` attribute 
-* object of parameters that defines, even more granularly, the specifics of
-wiring up a view to an outlet.  
+ 
+An example is `.connectOutlet('topNav', 'statesList', context.us_states);`
+  
+The most granular, and most declarative version is pass a single configuration
+POJsO with explicit parameters.  The specifics can be viewed in [connectOutlet
+API][ConnectOutletAPI].
 
-<!--- {{{2 -->
-```javascript
-window.App = Ember.Application.create({
-    ApplicationView: Ember.View.extend({
-      template:  Ember.Handlebars.compile("<p>App.View:</p><p>{{outlet}}</p>"),
-    }),
-    ApplicationController: Ember.Controller.extend(),
+To show the flexibility the Router affords via `connectOutlets`, the
+application will now be built up using the techniques described in this
+section.
 
-    ShoesView:  Em.View.extend({
-      template:  Ember.Handlebars.compile("<p>App.ShoesView:</p><p>{{outlet}}</p>"),
-    }),
-    ShoesController: Ember.Controller.extend(),
-
-    Router: Ember.Router.extend({
-      enableLogging:  true,
-
-      root:  Ember.Route.extend({
-        enter: function ( router ){
-          console.log("The root state was entered.");
-        },
-        index:  Ember.Route.extend({
-          enter: function ( router ){
-            console.log("The index sub-state was entered.");
-          },
-          route: '/'
-        }),
-        shoes:  Ember.Route.extend({
-          enter: function ( router ){
-            console.log("The shoes sub-state was entered.");
-          },
-          route: '/shoes',
-          connectOutlets:  function(router){
-            router.get('applicationController').connectOutlet('shoes');
-          }
-        }),
-        cars:  Ember.Route.extend({
-          enter: function ( router ){
-            console.log("The cars sub-state was entered.");
-          },
-          route: '/cars'
-        })
-      })
-    })
-});
-App.initialize();
-```
-<!--- }}}2 -->
-
-The application should look something like this:
-
-<img src="/images/routing-primer/initial-view-wireup.png">
-
-To show the flexibility the Router affords via `connectOutlets`, here's an example of how to use `{{outlets}}` in more complex views:
+[_Diff
+View_](https://github.com/sgharms/Halbert/commit/98e6f3ebc033937523ccd723e0d937a5d9465aca)
 
 <!-- {{{2 -->
 ```javascript
 window.App = Ember.Application.create({
-    ApplicationView: Ember.View.extend({
-      template:  Ember.Handlebars.compile("<p>App.View:</p><p>{{outlet alpha}}</p><hr/>{{outlet beta}}"),
-    }),
-    ApplicationController: Ember.Controller.extend(),
+  ApplicationView: Ember.View.extend({
+    templateName:  'application',
+    classNames: ['application-view']
+  }),
+  ApplicationController: Ember.Controller.extend({
+    slogan: 'A framework for creating ambitious web applications',
+    isSlogan: true
+  }),
 
-    ShoesView:  Em.View.extend({
-      template:  Ember.Handlebars.compile("<p>App.ShoesView:</p><p>{{outlet list}}</p>"),
-    }),
-    ShoesController: Ember.Controller.extend(),
+  CarsView:  Em.View.extend({
+    templateName:  'cars'
+  }),
+  CarsController:  Em.ArrayController.extend(),
 
-    ListOfShoesController:  Em.ArrayController.extend(),
-    ListOfShoesView:  Em.View.extend({
-      template:  Em.Handlebars.compile("{{#each shoe in controller}}<li>{{shoe.name}}</li>{{/each}}"),
-    }),
+  ShoesView:  Em.View.extend({
+    templateName:  'shoes'
+  }),
+  ShoesController:  Em.ArrayController.extend(),
 
-    FooterController:  Em.ObjectController.extend(),
-    FooterView:  Em.View.extend({
-      template:  Em.Handlebars.compile("This is the footer: {{message}}"),
-    }),
+  SalutationView:  Em.View.extend({
+    templateName:  'salutation'
+  }),
+  SalutationController:  Em.ObjectController.extend(),
 
-    Router: Ember.Router.extend({
-      enableLogging:  true,
-
-      root:  Ember.Route.extend({
+  ready: function(){
+    console.log("Created App namespace");
+  },
+  Router: Ember.Router.extend({
+    enableLogging:  true,
+    root:  Ember.Route.extend({
+      index:  Ember.Route.extend({
+        route:  '/',
+        connectOutlets:  function(router, context){
+          router.get('applicationController').connectOutlet('greeting', 'salutation', 
+                                                            { greeting: "My Ember App" });
+        }
+      }),
+      shoes:  Ember.Route.extend({
+        route: '/shoes',
         enter: function ( router ){
-          console.log("The root state was entered.");
+          console.log("The shoes sub-state was entered.");
         },
-        index:  Ember.Route.extend({
-          enter: function ( router ){
-            console.log("The index sub-state was entered.");
-          },
-          route: '/'
-        }),
-        shoes:  Ember.Route.extend({
-          enter: function ( router ){
-            console.log("The shoes sub-state was entered.");
-          },
-          route: '/shoes',
-          connectOutlets:  function(router){
-            router.get('applicationController').connectOutlet('beta', 'footer', { message: "agony"} );
-            router.get('applicationController').connectOutlet('alpha', 'shoes');
-
-            var listOfShoes = [ { name: "Rainbow Sandals" }, { name:  "Strappy shoes" }, 
-                { name:  "Blue Suede" } ];
-            router.get('shoesController').connectOutlet('list', 'listOfShoes', listOfShoes);
-
-          }
-        }),
-        cars:  Ember.Route.extend({
-          enter: function ( router ){
-            console.log("The cars sub-state was entered.");
-          },
-          route: '/cars'
-        })
+        connectOutlets:  function(router, context){
+          router.get('applicationController').connectOutlet('greeting', 'salutation', 
+                                                            { greeting: "Shoes Route" });
+          router.get('applicationController').connectOutlet('body', 'shoes');
+        }
+      }),
+      cars:  Ember.Route.extend({
+        route: '/cars',
+        enter: function ( router ){
+          console.log("The cars sub-state was entered.");
+        },
+        connectOutlets:  function(router, context){
+          router.get('applicationController').connectOutlet('greeting', 'salutation', 
+                                                            { greeting: "Cars Route" });
+          router.get('applicationController').connectOutlet('body', 'cars');
+        }
       })
     })
+  })
 });
+
 App.initialize();
+```
+
+```handlebars
+<script type="text/x-handlebars" data-template-name="application">
+  {{outlet greeting}}
+  <p {{bindAttr class="isSlogan"}} >Ember is: {{slogan}}</p>
+  {{outlet body}}
+  {{outlet footer}}
+</script>
+
+<script type="text/x-handlebars" data-template-name="cars">
+  <hr/>
+  <h1>Cars</h1>
+  <p>Here in my car / I feel safest of all</p>
+</script>
+
+<script type="text/x-handlebars" data-template-name="shoes">
+  <hr/>
+  <h1>Shoes</h1>
+  <p><a href="http://youtu.be/v_Yx0X-eHn8">N&uuml; Shooz?</p>
+</script>
+
+<script type="text/x-handlebars" data-template-name="salutation">
+  <h1>{{greeting}}</h1>
+</script>
 ```
 <!-- }}}2 -->
 
-Using the information thus far provided, the documentation for connectOutlet,
-and some patience, the flexibility and power of the `connectOutlets` method
-should help you see ways of building powerful views whose components can be
-easiely swapped out: no longer must you troll through endless template code
-removing (or adding) conditional clauses.  Simply create a new view / controller
-pair, unplug the old, and plug in the new.  
+Change your code to look like this and issue `App.router.transitionTo('shoes')`
+or `App.router.transitionTo('cars')` to change state and see how the
+application's appearance changes.  Or, try affixing the `#/cars` slug to change
+the state.  Ember's `outlet` metaphor makes building complex, scalable
+applications surprisingly easy.  No longer must you troll through endless
+template code removing (or adding) conditional clauses.  Simply create a new
+view / controller pair, unplug the old, and plug in the new.
 
 The Router's design with `{{outlet}}`s opens many exciting new possibilities:
 A/B testing, "admin" interfaces versus "regular" interfaces, portable layouts,
 etc.
 
 Now that we've demonstrated how to wire up a substantial view quickly, we need
-to provide a way, via the views, to affect Route state change.  This is
-addressed in the following section.
+to provide a way, via the views, to affect Route state change, clearly using
+`transitionTo` and typing in url slugs is not the way to go!  This is addressed
+in the following section.
 
 
 <!--- }}}1 -->
 
-## Moving from Route to Route
+### Moving from Route to Route
 
 <!--- {{{1 -->
 
@@ -932,9 +1018,7 @@ Recall that we have already demonstrated that routes can be changed with calls
 to `App.get('router').transitionTo('someState')`.  This change can also be
 triggered by  executing the `transitionTo` action as a result of a
 browser event: typically, click.  This section will show how to change state as
-a result of an event.  The subsequent section will cover how to effect state
-change as a result of the URL slug &mdash; the case that truly lives up to the name
-"Router."
+a result of an event.  
 
 Frequently a click event will cause a change in state.  A click on a post's
 title in a blog application should transition state to one where that route is
@@ -942,166 +1026,40 @@ shown.  A click on a link for "Dinner" should change the way that the menu's
 consitiuent views are wired up such that **steak frites** are on the menu
 versus **croque madame**.  
 
-Looking at our toy application, let's transition from the `shoes` state to the
-`cars` state.  We'll add a link in the `ShoesView` that will take us to the
-`CarsView`.  I'll edit the temlate for `ShoesView` to be the following:
+**BOOKMARK-WIP**
 
-      template:  Ember.Handlebars.compile(
-      "<p>App.ShoesView:</p><p>{{outlet list}}</p>" + 
-      "<p><a {{action goToCars href=true}}>Go To Cars</a>"),
+Looking at our application, let's transition from the `index` state to the
+`cars` state:
 
-The meat of the addition is:
+    <p><a {{action goToCars href=true}}>Go To Cars</a>
 
-      {{action goToCars href=true}}
-
-The `{{action}}` Handlebars helper is used throughout Ember's Handlebars
-templates to handle eventing in Ember (click, keyDown, [**etc.**][EventList]).
-If we change this line and navigate to the `/#/shoes` view, we receive an error
-from Ember warning that `goToCars` was not defined.
-
-[EventList]: http://docs.emberjs.com/symbols/Ember.View.html
-
-In Router-driven applications if an action is not intercepted by a view, that
-event will bubble up to the Route in which that view was rendered.  If that
-Route is a sub-route of another Route the transition will be sought there all
-the way up to the `Router` definition. 
-
-In this case, Ember looks to App.ShoesView to handle the click, it does not.
-It then bubbles upward until it hits the current Route and then bubbles out to
-any Route containing that Route.  In this case `goToCars` is not found
-**anywhere**.  As such, Ember raises an error.
-
-To alleviate this, we must define the `goToCars` transition somewhere in the
-event bubbling chain.  But what should `goToCars` be defined to?  It should be
-defined to a function generated by `Ember.Route.transitionTo`.  When passed a
-single argument of a routePath, this method generates a function which
-transitions states.  In this case, our `goToCars` should be defines to be
-`Ember.Route.transitionTo('root.cars')`.  We can put this inside the `shoes`
-route or in the `root` route.  For more generally applicable transitions, we
-can our transition at the root Route.  For more specific transitions, it might
-be more appropriate to have it with a very limited visibility in a very
-specific sub-sub-sub-route.
-
-As such we need to add the line to the `Router` declaration:
+And in the `Router` declaration:
 
     goToCars:  Ember.Route.transitionTo('root.cars')
 
-With these two changes in place, a new link appears for 'Go To Cars' when
-visiting `/#/shoes`.  Clicking on it, as the console debugging log shows,
-transports the view construct to `root.cars`.
+The `{{action}}` Handlebars helper is used throughout Ember's Handlebars
+templates to handle eventing in Ember (click, keyDown, [**etc.**][EventList]).
 
-While the state URL slug have both changed, we have not implemented
-`connectOutlets` in `root.cars`.  As such the view looks the same as
-`/#/shoes`.  Let's `connectOutlets` for `root.cars`.
+In Router-driven applications, if an action is not intercepted by a view, that
+event will bubble up to the Route in which that view was rendered.  If that
+Route is a sub-route of another Route the transition will be sought there all
+the way up to the top-level `Route` definition, our &uuml;r-container: `root`. 
 
-    connectOutlets:  function(router,context){
-      router.get('applicationController').connectOutlet('alpha', 'car');
-    }
+This bubbling effect allows certain actions to remain private.  If certain
+transitions should only be available for certain sub-sub-states, put the
+transition on the sub-state and you've achived a type of scoping.
 
-This also will require the addition of a `CarView` and `CarController`.  They
-are the following:
+In this example, Ember looks to App.ApplicationView to handle the click, it
+does not.  The event then bubbles upward until it hits the `root` `Route` where
+a transition is indeed found.
 
-    CarController:  Em.ObjectController.extend(),
-    CarView:  Em.View.extend({
-      template:  Em.Handlebars.compile("In the year 2012 we locomote by exploding dead sauruses.  Try some <a {{action goToShoes href=true}}>shoes</a>"),
-    }),
-
-You'll see that CarView has a link **back** to the `root.shoes` route.  This
-will require the addition of a `goToShoes` transition.  To show the flexibility
-of where these transitions can be placed, this transition will be localized
-into the `root.cars` route versus the more global definition of `goToShoes`.
-
-      goToShoes:  Em.Route.transitionTo('root.shoes'),
-
-The final code to allow movement between states by virtue of DOM click events is
-the following:
+Refresh the application and notice that by clicking on the 'Go To Cars' link,
+one now changes state to the 'cars' view. Using this pattern basic app
+traversal is now possible.
 
 <!-- {{{2 -->
+
 ```javascript
-/* Define the namespace, models, views, and controllers */
-window.App = Ember.Application.create({
-    ApplicationView: Ember.View.extend({
-      template:  Ember.Handlebars.compile("<p>App.View:</p><p>{{outlet
-alpha}}</p><hr/>{{outlet beta}}"),
-    }),
-    ApplicationController: Ember.Controller.extend(),
-
-    ShoesView:  Em.View.extend({
-      template:  Ember.Handlebars.compile("<p>App.ShoesView:</p><p>{{outlet
-list}}</p><p><a {{action goToCars href=true}}>Go To Cars</a>"),
-    }),
-    ShoesController: Ember.Controller.extend(),
-
-    ListOfShoesController:  Em.ArrayController.extend(),
-    ListOfShoesView:  Em.View.extend({
-      template:  Em.Handlebars.compile("{{#each shoe in
-controller}}<li>{{shoe.name}}</li>{{/each}}"),
-    }),
-
-    FooterController:  Em.ObjectController.extend(),
-    FooterView:  Em.View.extend({
-      template:  Em.Handlebars.compile("This is the footer: {{message}}"),
-    }),
-
-    CarController:  Em.ObjectController.extend(),
-    CarView:  Em.View.extend({
-      template:  Em.Handlebars.compile("In the year 2012 we locomote by
-exploding dead sauruses.  Try some <a {{action goToShoes
-href=true}}>shoes</a>"),
-    }),
-
-    ShoeDetailController:  Em.ObjectController.extend(),
-    ShoeDetailView:   Em.View.extend({
-      template:  Em.Handlebars.compile("Detail:  {{content}}")
-    }),
-
-    Router: Ember.Router.extend({
-      enableLogging:  true,
-      goToCars:  Em.Route.transitionTo('root.cars'),
-
-      root:  Ember.Route.extend({
-        enter: function ( router ){
-          console.log("The root state was entered.");
-        },
-        index:  Ember.Route.extend({
-          enter: function ( router ){
-            console.log("The index sub-state was entered.");
-          },
-          route: '/'
-        }),
-
-        shoes:  Ember.Route.extend({
-          enter: function ( router ){
-            console.log("The shoes sub-state was entered.");
-          },
-          route: '/shoes',
-          connectOutlets:  function(router){
-            router.get('applicationController').connectOutlet('beta', 'footer',
-{ message: "agony"} );
-            router.get('applicationController').connectOutlet('alpha', 'shoes');
-
-            var listOfShoes = [ { name: "Rainbow Sandals" }, { name:  "Strappy
-shoes" }, 
-                { name:  "Blue Suede" } ];
-            router.get('shoesController').connectOutlet('list', 'listOfShoes',
-listOfShoes);
-          },
-        }),
-
-        cars:  Ember.Route.extend({
-          goToShoes:  Em.Route.transitionTo('root.shoes'),
-          enter: function ( router ){
-            console.log("The cars sub-state was entered.");
-          },
-          route: '/cars',
-          connectOutlets:  function(router,context){
-            router.get('applicationController').connectOutlet('alpha', 'car');
-          }
-        })
-      })
-    })
-});
-App.initialize();
 ```
 <!-- }}}2 -->
 
@@ -1538,6 +1496,9 @@ Router to **any** `Ember.Object` that implements the methods specified in the
 [StepOne]: https://github.com/sgharms/Halbert/commit/c7f2f79f8a5b4f946ab6dc40850c0b7810ee5ef8
 [StepOneOne]: https://github.com/sgharms/Halbert/commit/369f7ce14c72dd9f552e890642ea63b742dade72
 [StepThree]: https://github.com/sgharms/Halbert/commit/0dfbb4b1fadb29e95967b98be9ca13778843fa3d
+[Trek]:  http://trek.github.com
+[ConnectOutletAPI]: https://github.com/emberjs/ember.js/blob/master/packages/ember-views/lib/system/controller.js#L102
+[EventList]: http://docs.emberjs.com/symbols/Ember.View.html
 <!-- }}}1 -->
 
-<!-- vim: set fdm=marker ft=markdown tw=79: -->
+<!-- vim: set wrap fdm=marker ft=markdown tw=79: -->
