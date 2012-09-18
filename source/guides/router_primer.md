@@ -1015,21 +1015,13 @@ in the following section.
 <!--- {{{1 -->
 
 Recall that we have already demonstrated that routes can be changed with calls
-to `App.get('router').transitionTo('someState')`.  This change can also be
-triggered by  executing the `transitionTo` action as a result of a
-browser event: typically, click.  This section will show how to change state as
-a result of an event.  
-
-Frequently a click event will cause a change in state.  A click on a post's
-title in a blog application should transition state to one where that route is
-shown.  A click on a link for "Dinner" should change the way that the menu's
-consitiuent views are wired up such that **steak frites** are on the menu
-versus **croque madame**.  
-
-**BOOKMARK-WIP**
+to `App.get('router').transitionTo('someState')`.  Ember also has the
+capability of triggering this action as a result of a browser event: typically,
+click.  This section will show how to change state as a result of an event.  
 
 Looking at our application, let's transition from the `index` state to the
-`cars` state:
+`cars` state.  We'll need the following inside of our `ApplicationView`'s
+template:
 
     <p><a {{action goToCars href=true}}>Go To Cars</a>
 
@@ -1053,25 +1045,281 @@ In this example, Ember looks to App.ApplicationView to handle the click, it
 does not.  The event then bubbles upward until it hits the `root` `Route` where
 a transition is indeed found.
 
+It is often desirable to have the `{{action}}` fire on the event of something
+that is not a hyperlink: an image, a sprite, etc.  In these cases the
+`href=true` component of the action can be elided.  When you want users to
+follow a link (i.e you have embedded the `{{action}}` in a link OR when you
+want the place whither they go to be bookmark-able, add the `href=true`
+directive.
+
+`Ember.Route.transitionTo('root.cars')` generates a function which does a
+transition.  When Ember finds the proper transition it uses Javascript's
+`call()` to invoke the function with the proper context.
+
 Refresh the application and notice that by clicking on the 'Go To Cars' link,
 one now changes state to the 'cars' view. Using this pattern basic app
 traversal is now possible.
 
+[_Diff View_](https://github.com/sgharms/Halbert/commit/87152ba404759897a0144cdbc4905f53016fcfa2)
+
 <!-- {{{2 -->
 
 ```javascript
+window.App = Ember.Application.create({
+  ApplicationView: Ember.View.extend({
+    templateName:  'application',
+    classNames: ['application-view']
+  }),
+  ApplicationController: Ember.Controller.extend({
+    slogan: 'A framework for creating ambitious web applications',
+    isSlogan: true
+  }),
+
+  CarsView:  Em.View.extend({
+    templateName:  'cars'
+  }),
+  CarsController:  Em.ArrayController.extend(),
+
+  ShoesView:  Em.View.extend({
+    templateName:  'shoes'
+  }),
+  ShoesController:  Em.ArrayController.extend(),
+
+  SalutationView:  Em.View.extend({
+    templateName:  'salutation'
+  }),
+  SalutationController:  Em.ObjectController.extend(),
+
+  TraversalView:  Em.View.extend({
+    templateName:  'traversal'
+  }),
+  TraversalController:  Em.ObjectController.extend(),
+
+  ready: function(){
+    console.log("Created App namespace");
+  },
+  Router: Ember.Router.extend({
+    enableLogging:  true,
+
+    goToCars:  Ember.Route.transitionTo('root.cars'),
+
+    root:  Ember.Route.extend({
+      index:  Ember.Route.extend({
+        route:  '/',
+        connectOutlets:  function(router, context){
+          router.get('applicationController').connectOutlet('greeting', 'salutation',
+                                                            { greeting: "My Ember App" });
+          router.get('applicationController').connectOutlet('body', 'traversal'); }
+      }),
+      shoes:  Ember.Route.extend({
+        route: '/shoes',
+        enter: function ( router ){
+          console.log("The shoes sub-state was entered.");
+        },
+        connectOutlets:  function(router, context){
+          router.get('applicationController').connectOutlet('greeting', 'salutation',
+                                                            { greeting: "Shoes Route" });
+          router.get('applicationController').connectOutlet('body', 'shoes');
+        }
+      }),
+      cars:  Ember.Route.extend({
+        route: '/cars',
+        enter: function ( router ){
+          console.log("The cars sub-state was entered.");
+        },
+        connectOutlets:  function(router, context){
+          router.get('applicationController').connectOutlet('greeting', 'salutation',
+                                                            { greeting: "Cars Route" });
+          router.get('applicationController').connectOutlet('body', 'cars');
+        }
+      })
+    })
+  })
+});
+
+App.initialize();
 ```
 <!-- }}}2 -->
 
+<!-- {{{2 -->
+```handlebars
+<script type="text/x-handlebars" data-template-name="application">
+  {{outlet greeting}}
+  <p {{bindAttr class="isSlogan"}} >Ember is: {{slogan}}</p>
+  {{outlet body}}
+  {{outlet footer}}
+</script>
+
+<script type="text/x-handlebars" data-template-name="cars">
+  <hr/>
+  <h1>Cars</h1>
+  <p>Here in my car / I feel safest of all</p>
+</script>
+
+<script type="text/x-handlebars" data-template-name="shoes">
+  <hr/>
+  <h1>Shoes</h1>
+  <p><a href="http://youtu.be/v_Yx0X-eHn8">N&uuml; Shooz?</p>
+</script>
+
+<script type="text/x-handlebars" data-template-name="salutation">
+  <h1>{{greeting}}</h1>
+</script>
+
+<script type="text/x-handlebars" data-template-name="traversal">
+  <p><a {{action goToCars href=true}}>Go To Cars</a>
+</script>
+```
+
+<!-- }}}2 -->
+
+By similar means, other `{{action}}` handlers and templates can be created so
+that the application can be navigated by clicking, as well as by changing URL,
+as well as by using `transitionTo`.  As a self-check, try to formulate how you
+would like to wire up these state-changes. A code listing follows but try it
+out yourself!
+
+[_Diff
+View_](https://github.com/sgharms/Halbert/commit/b26d039f51c294555bb986e159c08d6d89144dcc)
+
+<!-- {{{2 -->
+
+```javascript
+window.App = Ember.Application.create({
+  ApplicationView: Ember.View.extend({
+    templateName:  'application',
+    classNames: ['application-view']
+  }),
+  ApplicationController: Ember.Controller.extend({
+    slogan: 'A framework for creating ambitious web applications',
+    isSlogan: true
+  }),
+
+  CarsView:  Em.View.extend({
+    templateName:  'cars'
+  }),
+  CarsController:  Em.ArrayController.extend(),
+
+  ShoesView:  Em.View.extend({
+    templateName:  'shoes'
+  }),
+  ShoesController:  Em.ArrayController.extend(),
+
+  SalutationView:  Em.View.extend({
+    templateName:  'salutation'
+  }),
+  SalutationController:  Em.ObjectController.extend(),
+
+  TraversalView:  Em.View.extend({
+    templateName:  'traversal'
+  }),
+  TraversalController:  Em.ObjectController.extend(),
+
+
+  HomeView:  Em.View.extend({
+    template:  Em.Handlebars.compile('<p><a {{action goHome href=true}}><em>Go Home</em></a></p>')
+  }),
+  HomeController:  Em.ObjectController.extend(),
+
+  ready: function(){
+    console.log("Created App namespace");
+  },
+  Router: Ember.Router.extend({
+    enableLogging:  true,
+
+    goToCars:  Ember.Route.transitionTo('cars'),
+    goToShoes:  Ember.Route.transitionTo('shoes'),
+    goHome:  Ember.Route.transitionTo('index'),
+
+    root:  Ember.Route.extend({
+      index:  Ember.Route.extend({
+        route:  '/',
+        connectOutlets:  function(router, context){
+          router.get('applicationController').connectOutlet('greeting', 'salutation',
+                                                            { greeting: "My Ember App" });
+          router.get('applicationController').connectOutlet('body', 'traversal'); }
+      }),
+      shoes:  Ember.Route.extend({
+        route: '/shoes',
+        enter: function ( router ){
+          console.log("The shoes sub-state was entered.");
+        },
+        connectOutlets:  function(router, context){
+          router.get('applicationController').connectOutlet('greeting', 'salutation',
+                                                            { greeting: "Shoes Route" });
+          router.get('applicationController').connectOutlet('body', 'shoes');
+          router.get('applicationController').connectOutlet('footer', 'traversal');
+          router.get('traversalController').connectOutlet('home');
+        }
+      }),
+      cars:  Ember.Route.extend({
+        route: '/cars',
+        enter: function ( router ){
+          console.log("The cars sub-state was entered.");
+        },
+        connectOutlets:  function(router, context){
+          router.get('applicationController').connectOutlet('greeting', 'salutation',
+                                                            { greeting: "Cars Route" });
+          router.get('applicationController').connectOutlet('body', 'cars');
+          router.get('applicationController').connectOutlet('footer', 'traversal');
+          router.get('traversalController').connectOutlet('home');
+        }
+      })
+    })
+  })
+});
+
+App.initialize();
+```
+<!-- }}}2 -->
+
+<!-- {{{2 -->
+```handlebars
+<script type="text/x-handlebars" data-template-name="application">
+  {{outlet greeting}}
+  <p {{bindAttr class="isSlogan"}} >Ember is: {{slogan}}</p>
+  {{outlet body}}
+  {{outlet footer}}
+</script>
+
+<script type="text/x-handlebars" data-template-name="cars">
+  <hr/>
+  <h1>Cars</h1>
+  <p>Here in my car / I feel safest of all</p>
+</script>
+
+<script type="text/x-handlebars" data-template-name="shoes">
+  <hr/>
+  <h1>Shoes</h1>
+  <p><a href="http://youtu.be/v_Yx0X-eHn8">N&uuml; Shooz?</p>
+</script>
+
+<script type="text/x-handlebars" data-template-name="salutation">
+  <h1>{{greeting}}</h1>
+</script>
+
+<script type="text/x-handlebars" data-template-name="traversal">
+  <hr/>
+  <p><a {{action goToCars href=true}}>Go To Cars</a>
+  <p><a {{action goToShoes href=true}}>Go To Shoes</a>
+  {{outlet}}
+</script>
+```
+<!-- }}}2 -->
+
+At this point you should be grinning because you're probably starting to feel
+comfortable with the Router and Ember and are realizing how much power it gives
+you with so little typing!
+
 <!--}}}1-->
 
-## Cleaning up Our Data Sources
+## Fetching Data
 
 <!--- {{{1 -->
 
-In this example I have provided data to each of the routes by using some sort
-of locally-defined data strucutre e.g. the variables `shoeList` and
-`listOfShoes`.  Clearly, there is a better way to get data.
+While the Router has, thus far, afforded this application many wonderful
+features: discrete states, clarity of intention, a back button that works, etc.
+a very big component is missing:  data.
 
 Ember's opinion is that you should ask your Model classes how to retrieve
 instances or collections of that model.  This should look *somewhat* similar to
@@ -1080,39 +1328,63 @@ those coming from Rails.  In the same way as one might express `Post.all` or
 work should occur as a "class method" on an Ember model.
 
 Class method, above, appears in quotes to note that we fully understand that no
-such thing exists in the Javascript language per se.  Let's structure the code
-for gathering the "list of shoes."   In the `root.shoes` route we have the
-following code: 
-
-    var listOfShoes = [ { name: "Rainbow Sandals" }, { name:  "Strappy shoes" }, { name:  "Blue Suede" } ];
-    router.get('shoesController').connectOutlet('list', 'listOfShoes',
-listOfShoes);
-
-One way of reading this, if we may think back to a C-influenced style of
-thinking, is this:
+such thing exists in the Javascript language per se.  Let's imagine a working
+model for how data retrieval should work.   This process will be presented in a 
+C-influenced style for reasons explained shortly:
 
 1.  Construct an array of objects
 1.  Said array of objects can be "pointed to" by a reference.  For clarity
     purposes this will be called `0x000016`
-1.  Give the reference to that array of objects to the variable `listOfShoes`
-1.  Give the `ShoeController` arguments of (list, name, contextReference) where
-    contextReference points to the reference of our array of objects, that is
-    to the object at address `0x000016`.
+1.  Refer to the reference of objects by the variable name: `listOfShoes`
+1.  Give the `ShoeView`'s `connectOutlet` arguments of (anOutlet,
+    name, contextReference) where contextReference points to the reference of
+    our array of objects, that is to the object at address `0x000016`, also
+    known as `listOfShoes`
+1.  Make this `listOfShoes` available by calling a method on a semantically
+    appropriate object
 
-Let's make it such that the reference object comes back from something
-semantically appropriate.  The Ember preference would be to call the method:
-`App.Shoe.all()` which returns a unique reference address which, for the
-lifetime of the app, will be the source of data for the `listOfShoesController`
-which will inform the `listOfShoesView`.
+To translate this model to be compatible with Ember's opinions, the `Router`
+should be to call the method: `App.Shoe.all()` which returns a unique reference
+address which, for the lifetime of the app, will be the source of data for the
+`listOfShoesController` which will inform the `ShoesView`'s controller partner,
+`ShoesController`.  Since the content of the `content` variable is to be an
+array, it makes sense that `ShoesController` should be an extension of the
+`Em.ArrayController` class.  
 
-Why all this discussion of references?  If one were to replace
-listOfController.content with another array (a different array reference), the
-view, which is watching the old reference, **would not know to update itself**.
-This is a very common error for those learning to use the Router and to
-integrate it with model-held data methods.
+#### Aside:  Sublcasses of Ember.Controller:  Ember.ArrayController and ObjectController
 
-Here's the code for the `all()` method on `App.Shoe`:
+If one examines the sample code thus far, one will note that both
+`ShoesController` and `CarsControllers` are, and have been, `ArrayControllers`
+since the very beginning of this document.  For controllers that don't manage a
+collection of array-like data there is `Ember.ObjectController` whose content
+variable is, unsurprisingly, an `Object`.
 
+The chief virtue of these `Ember.Controller` subclasses is that in the
+templates of the associated views of these controllers, one may issue a
+Handlebars directive like `{{#each shoe in controller}}` and the view and the
+controller will automatically proxy the controller's `content` attribute as the
+enumerable thing (or dereferencable thing, in the case of
+`Ember.ObjectController)` to the view.
+
+#### Why the Focus on References?
+
+In the discussion before the aside, much ado was made of this notion of
+"references."  When Ember views are linked up via the router the content
+properties of the controllers are set to watch a specific Ember object.  Per
+our previous example, say, the object at address 0x000016.  
+
+If one were to replace ShoesController.content with another array (a different
+array reference), the view, which would still be watching the old reference,
+**would not know to update itself**.  This is a very common error for those
+learning to use the Router and to integrate it with model-held data methods.
+
+As such when data updates come the content at the controller's `content`
+property must be _replaced_ or emptied and updated.  The content address cannot
+be changed by means of the Ember `set()` command.
+
+Let's now add the code for fetching all the Shoes:
+
+<!-- {{{2 --> 
 ```javascript
 
 App.Shoe = Ember.Object.extend();
@@ -1122,15 +1394,11 @@ App.Shoe.reopenClass({
   all:  function(){
     var allShoes = this._listOfShoes;
 
-    // Mock an ajax call
+    // Mock an ajax call; like a jQuery.ajax might have done...
     setTimeout( function(){
       allShoes.clear();
       allShoes.pushObjects(
-        [ 
-          { id: 'rainbow',   name: "Rainbow Sandals" },
-          { id: 'strappy',   name: "Strappy shoes" },
-          { id: 'bluesuede', name: "Blue Suede" } 
-        ]
+        [  shoeObject1, shoeObject2 ... n ]
       );
     }, 2000);
 
@@ -1139,25 +1407,41 @@ App.Shoe.reopenClass({
 });
 ```
 
-After the `App.create` (but before the `App.initialize`!), we add the previous
-listing.  From the declaration inside `root.shoes` here's what happens:
+While we're here, let's add a find method that will let us look up a single
+Shoe by its ID:
 
-1.  Declare a class `App.Shoe`
-1.  Provide a unique, "private" attribute  called `_listOfShoes`
-1.  Provide an `all()` method.
+```javascript
+  find:  function(id){
+    return this._listOfShoes.findProperty('id', id);
+  },
+```
+
+<!-- }}}2 --> 
+
+After the `App.create` (but before the `App.initialize`!), we add the previous
+listing.  This code:
+
+1.  Declares a class `App.Shoe`
+1.  Provides a unique, "private" attribute  called `_listOfShoes`
+1.  Provides an `all()` method.
 
 Then the router is initialized and all the Routes are created and attached to
-the `App.router` instance variable.  When the `root.shoes` route is entered.
+the `App.router` instance variable.  When the `shoes` route is entered.
 `connectOutlets` fires and the following happens:
 
 1.  `App.Shoe.all` is called
 1.  A local reference (`allShoes`) to a persistent address (`App.Shoe._listOfShoes`) is gained 
 1.  An asynchronous call is made (mocking an AJAX call) that updates in 2
-    seconds time
+    seconds' time
 1.  The reference address to `App.Shoe._listOfShoes` is returned, a pointer to an
     empty array (`Em.A()`)
-1.  _Asynchronously_ the local reference is updated ( it is empted by the
-    `clear()` method and then loaded with the hard-coded array set
+1.  In `connectOutlets` this data (an empty array reference) is sent to the
+    `ShoesController`'s `content` property
+1.  _Asynchronously_ _listOfShoes is updated ( it is empted by the `clear()`
+    method and then loaded with the hard-coded array
+1.  Ember's observers notice that there has been a change at the observed
+    reference address and they tell the chain of views connected by
+    `connectOutlet` to re-render with this new data
 
 Thanks to Ember's bindings, when this is viewed in the browser, the
 `listOfShoesView` renders an empty array ("do an each of my controller's content,
@@ -1166,6 +1450,8 @@ change and the view is notified of this change ("do an each of my controller's
 content, there are items in there, render them").
 
 It might have been tempting to do the following in `all`:
+
+<!--- {{{2 -->
 
 ```javascript
 App.Shoe = Ember.Object.extend();
@@ -1178,6 +1464,131 @@ App.Shoe.reopenClass({
     // Mock an ajax call
     setTimeout( function(){
       this._listOfShoes = 
+        [ ...data ... ]
+      );
+    }, 2000);
+
+    return this._listOfShoes;
+  }
+});
+```
+<!--- }}}2 -->
+
+
+By **assigning** a new object reference ID, we have left the view looking at
+the **old** reference address but have put our new data at a **new** address.
+**The view will not update** if you make this error.
+
+The following code will lead to the `shoes` route having actual data.  This
+listing is a lot of fun.  This code, when you click to the `shoes` route will
+appear empty for 2 seconds (to simulate a very slow AJAX transaction) and then
+violà: a listing of the shoes will appear.  This is the pattern that underlies
+Ember data and which was wonderfully explained elsewhere by [Trek
+Golwaki][Trek].
+
+The `Shoes` route should look like the following:
+
+<img src="/images/routing-primer/data-loaded-shoes-route.png">
+
+[_Diff View_](https://github.com/sgharms/Halbert/commit/8d0e2757723f39191f00bf6741fb751b892b1742)
+
+<!--- {{{2 -->
+```javascript
+window.App = Ember.Application.create({
+  ApplicationView: Ember.View.extend({
+    templateName:  'application',
+    classNames: ['application-view']
+  }),
+  ApplicationController: Ember.Controller.extend({
+    slogan: 'A framework for creating ambitious web applications',
+    isSlogan: true
+  }),
+
+  CarsView:  Em.View.extend({
+    templateName:  'cars'
+  }),
+  CarsController:  Em.ArrayController.extend(),
+
+  ShoesView:  Em.View.extend({
+    templateName:  'shoes'
+  }),
+  ShoesController:  Em.ArrayController.extend(),
+
+  SalutationView:  Em.View.extend({
+    templateName:  'salutation'
+  }),
+  SalutationController:  Em.ObjectController.extend(),
+
+  TraversalView:  Em.View.extend({
+    templateName:  'traversal'
+  }),
+  TraversalController:  Em.ObjectController.extend(),
+
+
+  HomeView:  Em.View.extend({
+    template:  Em.Handlebars.compile('<p><a {{action goHome href=true}}><em>Go Home</em></a></p>')
+  }),
+  HomeController:  Em.ObjectController.extend(),
+
+  ready: function(){
+    console.log("Created App namespace");
+  },
+  Router: Ember.Router.extend({
+    enableLogging:  true,
+
+    goToCars:  Ember.Route.transitionTo('cars'),
+    goToShoes:  Ember.Route.transitionTo('shoes'),
+    goHome:  Ember.Route.transitionTo('index'),
+
+    root:  Ember.Route.extend({
+      index:  Ember.Route.extend({
+        route:  '/',
+        connectOutlets:  function(router, context){
+          router.get('applicationController').connectOutlet('greeting', 'salutation',
+                                                            { greeting: "My Ember App" });
+          router.get('applicationController').connectOutlet('body', 'traversal'); }
+      }),
+      shoes:  Ember.Route.extend({
+        route: '/shoes',
+        enter: function ( router ){
+          console.log("The shoes sub-state was entered.");
+        },
+        connectOutlets:  function(router, context){
+          router.get('applicationController').connectOutlet('greeting', 'salutation',
+                                                            { greeting: "Shoes Route" });
+          router.get('applicationController').connectOutlet('body', 'shoes', App.Shoe.all());
+          router.get('applicationController').connectOutlet('footer', 'traversal');
+          router.get('traversalController').connectOutlet('home');
+        }
+      }),
+      cars:  Ember.Route.extend({
+        route: '/cars',
+        enter: function ( router ){
+          console.log("The cars sub-state was entered.");
+        },
+        connectOutlets:  function(router, context){
+          router.get('applicationController').connectOutlet('greeting', 'salutation',
+                                                            { greeting: "Cars Route" });
+          router.get('applicationController').connectOutlet('body', 'cars');
+          router.get('applicationController').connectOutlet('footer', 'traversal');
+          router.get('traversalController').connectOutlet('home');
+        }
+      })
+    })
+  })
+});
+
+App.Shoe = Ember.Object.extend();
+App.Shoe.reopenClass({
+  _listOfShoes:  Em.A(),
+
+  all:  function(){
+    var allShoes = this._listOfShoes;
+
+    // Mock an ajax call; like a jQuery.ajax might have done...
+    setTimeout( function(){
+      allShoes.clear();
+      allShoes.pushObjects(
         [ 
           { id: 'rainbow',   name: "Rainbow Sandals",
               price: '$60.00', description: 'San Clemente style' },
@@ -1192,26 +1603,62 @@ App.Shoe.reopenClass({
     return this._listOfShoes;
   }
 });
+
+App.initialize();
 ```
-By **assigning** a new object reference ID, we have left the view looking at
-the **old** reference address but have put our new data at a **new** address.
-**Your view will not update** if you make this error.
+<!--- }}}2 -->
 
 <!--- {{{2 -->
+```handlebars
+<script type="text/x-handlebars" data-template-name="application">
+  {{outlet greeting}}
+  <p {{bindAttr class="isSlogan"}} >Ember is: {{slogan}}</p>
+  {{outlet body}}
+  {{outlet footer}}
+</script>
+
+<script type="text/x-handlebars" data-template-name="cars">
+  <hr/>
+  <h1>Cars</h1>
+  <p>Here in my car / I feel safest of all</p>
+</script>
+
+<script type="text/x-handlebars" data-template-name="shoes">
+  <hr/>
+  <h1>Shoes</h1>
+  <h1>Current Shoes</h1>
+
+  <p>
+    {{#each shoe in controller}}
+     {{#with shoe}}
+        <li style="color: #000">{{id}} | {{name}} | {{price}} : {{description}}</li>
+     {{/with}}
+    {{/each}}
+  </p>
+  
+  <p><a href="http://youtu.be/v_Yx0X-eHn8">N&uuml; Shooz?</p>
+</script>
+
+<script type="text/x-handlebars" data-template-name="salutation">
+  <h1>{{greeting}}</h1>
+</script>
+
+<script type="text/x-handlebars" data-template-name="traversal">
+  <hr/>
+  <p><a {{action goToCars href=true}}>Go To Cars</a>
+  <p><a {{action goToShoes href=true}}>Go To Shoes</a>
+  {{outlet}}
+</script>
+```
 <!--- }}}2 -->
 
 <!--- }}}1 -->
 
-While we're here, let's add a find method that will let us look up a single
-Shoe by its ID:
-
-```javascript
-  find:  function(id){
-    return this._listOfShoes.findProperty('id', id);
-  },
-```
 With a model in place that can do our data fetching, let's make it possible
 to go from viewing a list of shoes, to viewing the details about a shoe.
+
+<!-- }}}1 -->
+
 
 ## From a List of Shoes to a Shoe
 
@@ -1219,7 +1666,7 @@ Here's the battle plan:
 
 1.  Make a click on the shoe listing do something
 1.  Make a something that receives that noficiation change
-1.  Make the notification say somethign like: such-and-such shoe's details
+1.  Make the notification say something like: such-and-such shoe's details
     should be shown
 
 In Ember, this is surprisingly easy and should feel a bit familiar if you've
