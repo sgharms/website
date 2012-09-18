@@ -1996,9 +1996,9 @@ Router to **any** `Ember.Object` that implements the methods specified in the
 [EventList]: http://docs.emberjs.com/symbols/Ember.View.html
 <!-- }}}1 -->
 
-## Acknoledgements
+## Acknowledgments
 
-Big thanks to the Ember core team  I owe a special thanks to Trek G. for his
+Big thanks to the Ember core team I owe a special thanks to Trek G. for his
 review of this document, encouragement, and his efforts in documentation of
 this toolkit.
 
